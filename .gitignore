@@ -1,0 +1,43 @@
+# Python & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets, credentials & environment variables
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.pkcs12
+*.cer
+*.crt
+*secret*
+*credential*
+*credentials*.json
+azure_credentials.json
+
+# Local data (raw snapshots and data files)
+data/*
+!data/.gitkeep
+data/**
+!data/**/.gitkeep
+
+# Logs & OS artifacts
+*.log
+.DS_Store
+Thumbs.db
