@@ -1,6 +1,47 @@
 {
 	"name": "pl_job_market_daily_etl",
 	"properties": {
+		"activities": [
+			{
+				"name": "Notebook1",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": {
+							"value": "nb_bronze_to_silver_jobs",
+							"type": "Expression"
+						},
+						"type": "NotebookReference"
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": {
+							"value": "sparkjobmarket",
+							"type": "Expression"
+						},
+						"type": "BigDataPoolReference"
+					},
+					"executorSize": "Small",
+					"conf": {
+						"spark.dynamicAllocation.enabled": false
+					},
+					"driverSize": "Small"
+				},
+				"linkedServiceName": {
+					"referenceName": "ls_synapse_job_market",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
 		"annotations": []
 	}
 }
