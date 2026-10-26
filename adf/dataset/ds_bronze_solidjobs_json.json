@@ -1,0 +1,18 @@
+{
+	"name": "ds_bronze_solidjobs_json",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls_job_market",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileSystem": "bronze"
+			}
+		},
+		"schema": {}
+	}
+}
