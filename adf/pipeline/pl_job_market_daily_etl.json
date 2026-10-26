@@ -22,6 +22,16 @@
 						},
 						"type": "NotebookReference"
 					},
+					"parameters": {
+						"snapshot": {
+							"value": "2026-10-26",
+							"type": "string"
+						},
+						"run_id": {
+							"value": "20261026T101729704882Z",
+							"type": "string"
+						}
+					},
 					"snapshot": true,
 					"sparkPool": {
 						"referenceName": {
@@ -32,9 +42,12 @@
 					},
 					"executorSize": "Small",
 					"conf": {
-						"spark.dynamicAllocation.enabled": false
+						"spark.dynamicAllocation.enabled": false,
+						"spark.dynamicAllocation.minExecutors": 2,
+						"spark.dynamicAllocation.maxExecutors": 2
 					},
-					"driverSize": "Small"
+					"driverSize": "Small",
+					"numExecutors": 2
 				},
 				"linkedServiceName": {
 					"referenceName": "ls_synapse_job_market",
