@@ -1,0 +1,12 @@
+{
+	"name": "ls_synapse_job_market",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSynapseArtifacts",
+		"typeProperties": {
+			"endpoint": "https://syn-job-market-dev.dev.azuresynapse.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/6875da89-2389-4037-9f5d-efe00acba6b2/resourceGroups/rg-job-market-dev/providers/Microsoft.Synapse/workspaces/syn-job-market-dev"
+		}
+	}
+}
