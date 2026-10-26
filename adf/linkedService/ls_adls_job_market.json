@@ -1,0 +1,10 @@
+{
+	"name": "ls_adls_job_market",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://stjobmarketdev01.dfs.core.windows.net/"
+		}
+	}
+}
