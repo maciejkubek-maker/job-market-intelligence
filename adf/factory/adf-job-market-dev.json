@@ -1,0 +1,15 @@
+{
+	"name": "adf-job-market-dev",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "polandcentral",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "803351b7-0fd2-4193-80da-6658d50548b8",
+		"tenantId": "19c71065-8a8b-4c1f-8524-1df1fc2cf247"
+	}
+}
