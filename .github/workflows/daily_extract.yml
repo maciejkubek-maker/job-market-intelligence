@@ -32,7 +32,60 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Extract SOLID.Jobs offers
-        run: uv run python src/extract_solidjobs.py
+        run: |
+          uv run python -c 'from datetime import datetime, timezone; print(datetime.now(timezone.utc).isoformat())' > "$RUNNER_TEMP/extract_started.txt"
+          uv run python src/extract_solidjobs.py
 
       - name: Upload to Azure Bronze
         run: uv run python src/upload_to_adls.py --bronze-only
+
+      - name: Get completed snapshot parameters
+        id: snapshot
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path("data/bronze/source=solidjobs")
+          started_text = (
+              Path(os.environ["RUNNER_TEMP"]) / "extract_started.txt"
+          ).read_text().strip()
+
+          started = datetime.fromisoformat(
+              started_text.replace("Z", "+00:00")
+          )
+
+          candidates = []
+          for path in root.glob("snapshot_date=*/run_id=*/manifest.json"):
+              manifest = json.loads(path.read_text(encoding="utf-8"))
+              if manifest.get("status") != "completed":
+                  continue
+
+              created = datetime.fromisoformat(manifest["started_at"])
+              if created >= started:
+                  candidates.append((manifest["run_id"], manifest))
+
+          if not candidates:
+              raise RuntimeError(
+                  "Brak ukończonego snapshotu z bieżącego uruchomienia"
+              )
+
+          run_id, manifest = max(candidates)
+          snapshot = manifest["snapshot_date"]
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"snapshot={snapshot}\n")
+              output.write(f"run_id={run_id}\n")
+
+          print("Snapshot:", snapshot)
+          print("Run ID:", run_id)
+          PY
+
+      - name: Start ADF Bronze to Gold pipeline
+        run: |
+          uv run python src/trigger_adf.py \
+            --snapshot "${{ steps.snapshot.outputs.snapshot }}" \
+            --run-id "${{ steps.snapshot.outputs.run_id }}" \
+            --execute
