@@ -27,6 +27,13 @@ parser.add_argument(
     action="store_true",
     help="Uruchom pipeline ADF po sprawdzeniu uploadu"
 )
+parser.add_argument(
+    "--bronze-only",
+    action="store_true",
+    help="Tylko upload Bronze, bez Silver i ADF"
+)
+
+
 args = parser.parse_args()
 
 # ==========================================
@@ -177,6 +184,11 @@ print("\nUPLOAD ZAKOŃCZONY")
 # ==========================================
 
 snapshot_date = snapshot_dir.parent.name.removeprefix("snapshot_date=")
+
+
+if args.bronze_only:
+    print("Tryb Bronze-only — pomijam Silver i ADF.")
+    raise SystemExit(0)
 
 print("\nPrzekazuję parametry do trigger_adf.py")
 
