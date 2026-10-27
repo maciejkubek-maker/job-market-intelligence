@@ -1,9 +1,9 @@
 import argparse
+import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
-import hashlib
+from pathlib import Path
 
 from azure.identity import AzureCliCredential
 from azure.storage.filedatalake import DataLakeServiceClient

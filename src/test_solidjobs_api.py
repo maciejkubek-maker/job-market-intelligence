@@ -1,6 +1,6 @@
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -54,8 +54,8 @@ for job in jobs[:5]:
 
 # 5. Zapis surowej odpowiedzi JSON
 project_root = Path(__file__).resolve().parent.parent
-snapshot_date = datetime.now(timezone.utc).date().isoformat()
-run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+snapshot_date = datetime.now(UTC).date().isoformat()
+run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
 
 output_dir = (
     project_root
@@ -77,7 +77,7 @@ print("\nZAPISANO:", output_file)
 # 6. Sprawdzenie dostępnych pól
 if jobs:
     print("\nPOLA PIERWSZEJ OFERTY:")
-    for key in jobs[0].keys():
+    for key in jobs[0]:
         print("-", key)
 
 print("\nTEST ZAKOŃCZONY")
