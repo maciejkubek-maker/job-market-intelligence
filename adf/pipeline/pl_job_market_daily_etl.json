@@ -24,11 +24,17 @@
 					},
 					"parameters": {
 						"snapshot": {
-							"value": "2026-10-27",
+							"value": {
+								"value": "@pipeline().parameters.snapshot",
+								"type": "Expression"
+							},
 							"type": "string"
 						},
 						"run_id": {
-							"value": "20261027T100650200206Z",
+							"value": {
+								"value": "@pipeline().parameters.run_id",
+								"type": "Expression"
+							},
 							"type": "string"
 						}
 					},
@@ -55,6 +61,16 @@
 				}
 			}
 		],
+		"parameters": {
+			"snapshot": {
+				"type": "string",
+				"defaultValue": "2026-10-27"
+			},
+			"run_id": {
+				"type": "string",
+				"defaultValue": "20261027T100650200206Z"
+			}
+		},
 		"annotations": []
 	}
 }
