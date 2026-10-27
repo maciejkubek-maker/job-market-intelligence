@@ -3,6 +3,9 @@ name: Job Market - Extract to Bronze
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+      timezone: "Europe/Warsaw"
 
 permissions:
   id-token: write
