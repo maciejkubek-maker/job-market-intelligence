@@ -1,6 +1,9 @@
-
+import argparse
 import json
 from pathlib import Path
+import subprocess
+import sys
+import hashlib
 
 from azure.identity import AzureCliCredential
 from azure.storage.filedatalake import DataLakeServiceClient
@@ -18,6 +21,14 @@ BRONZE = (
 ACCOUNT = "stjobmarketdev01"
 CONTAINER = "bronze"
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--execute",
+    action="store_true",
+    help="Uruchom pipeline ADF po sprawdzeniu uploadu"
+)
+args = parser.parse_args()
+
 # ==========================================
 # 2. POŁĄCZENIE Z AZURE
 # ==========================================
@@ -30,6 +41,20 @@ service = DataLakeServiceClient(
 )
 
 filesystem = service.get_file_system_client(CONTAINER)
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+def silver_snapshot_exists(snapshot_date: str, run_id: str) -> bool:
+    silver_fs = service.get_file_system_client("silver")
+
+    success_path = (
+        f"jobs/source=solidjobs/"
+        f"snapshot_date={snapshot_date}/"
+        f"run_id={run_id}/_SUCCESS"
+    )
+
+    return silver_fs.get_file_client(success_path).exists()
 
 # ==========================================
 # 3. ZNAJDŹ UKOŃCZONY SNAPSHOT
@@ -99,12 +124,18 @@ for index, file_path in enumerate(files, start=1):
         properties = file_client.get_file_properties()
 
         if properties.size == local_size:
-            print(f"[{index}/{len(files)}] POMINIĘTO: {file_path.name}")
-            skipped += 1
-            continue
+            local_hash = sha256(file_path.read_bytes())
+            remote_hash = sha256(file_client.download_file().readall())
+
+            if local_hash == remote_hash:
+                print(f"[{index}/{len(files)}] POMINIĘTO: {file_path.name}")
+                skipped += 1
+                continue
+
+            print(f"Niezgodna zawartość pliku: {file_path.name}")
 
         # Naprawa pliku pozostawionego po nieudanym uploadzie.
-        print("Ponawiam niekompletny plik:", file_path.name)
+        print("Naprawiam plik w Azure:", file_path.name)
 
         with file_path.open("rb") as data:
             file_client.upload_data(
@@ -140,3 +171,29 @@ print("Łącznie:", uploaded + skipped + repaired)
 print("===================================")
 
 print("\nUPLOAD ZAKOŃCZONY")
+
+# ==========================================
+# 7. PRZYGOTUJ URUCHOMIENIE ADF
+# ==========================================
+
+snapshot_date = snapshot_dir.parent.name.removeprefix("snapshot_date=")
+
+print("\nPrzekazuję parametry do trigger_adf.py")
+
+if silver_snapshot_exists(snapshot_date, run_id):
+    print("Snapshot już istnieje w Silver — pomijam ADF.")
+    raise SystemExit(0)
+
+print("Snapshot nie ma znacznika _SUCCESS w Silver — można uruchomić ADF.")
+
+command = [
+    sys.executable,
+    str(ROOT / "src" / "trigger_adf.py"),
+    "--snapshot", snapshot_date,
+    "--run-id", run_id,
+]
+
+if args.execute:
+    command.append("--execute")
+
+subprocess.run(command, check=True)
