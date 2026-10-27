@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "adf-job-market-dev"
+		},
+		"ls_adls_job_market_properties_typeProperties_url": {
+			"value": "https://stjobmarketdev01.dfs.core.windows.net/"
+		},
+		"ls_synapse_job_market_properties_typeProperties_endpoint": {
+			"value": "https://syn-job-market-dev.dev.azuresynapse.net"
+		}
+	}
+}

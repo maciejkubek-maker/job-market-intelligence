@@ -1,0 +1,157 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "adf-job-market-dev"
+		},
+		"ls_adls_job_market_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stjobmarketdev01.dfs.core.windows.net/"
+		},
+		"ls_synapse_job_market_properties_typeProperties_endpoint": {
+			"type": "string",
+			"defaultValue": "https://syn-job-market-dev.dev.azuresynapse.net"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_job_market_daily_etl')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Notebook1",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "nb_bronze_to_silver_jobs",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"snapshot": {
+									"value": {
+										"value": "@pipeline().parameters.snapshot",
+										"type": "Expression"
+									},
+									"type": "string"
+								},
+								"run_id": {
+									"value": {
+										"value": "@pipeline().parameters.run_id",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "sparkjobmarket",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false,
+								"spark.dynamicAllocation.minExecutors": 2,
+								"spark.dynamicAllocation.maxExecutors": 2
+							},
+							"driverSize": "Small",
+							"numExecutors": 2
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_job_market",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"snapshot": {
+						"type": "string"
+					},
+					"run_id": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_synapse_job_market')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_bronze_solidjobs_json')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_adls_job_market",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "bronze"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_adls_job_market')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls_job_market')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_job_market_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_synapse_job_market')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSynapseArtifacts",
+				"typeProperties": {
+					"endpoint": "[parameters('ls_synapse_job_market_properties_typeProperties_endpoint')]",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/6875da89-2389-4037-9f5d-efe00acba6b2/resourceGroups/rg-job-market-dev/providers/Microsoft.Synapse/workspaces/syn-job-market-dev"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
