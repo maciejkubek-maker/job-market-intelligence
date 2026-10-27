@@ -55,7 +55,7 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Notebook1",
+						"name": "Bronze_to_silver",
 						"type": "SynapseNotebook",
 						"dependsOn": [],
 						"policy": {
@@ -89,6 +89,55 @@
 									},
 									"type": "string"
 								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": {
+									"value": "sparkjobmarket",
+									"type": "Expression"
+								},
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": false,
+								"spark.dynamicAllocation.minExecutors": 2,
+								"spark.dynamicAllocation.maxExecutors": 2
+							},
+							"driverSize": "Small",
+							"numExecutors": 2
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_synapse_job_market",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "SIlver_to_gold",
+						"type": "SynapseNotebook",
+						"dependsOn": [
+							{
+								"activity": "Bronze_to_silver",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": {
+									"value": "nb_silver_to_gold_jobs",
+									"type": "Expression"
+								},
+								"type": "NotebookReference"
 							},
 							"snapshot": true,
 							"sparkPool": {
