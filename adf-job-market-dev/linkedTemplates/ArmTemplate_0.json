@@ -134,7 +134,7 @@
 						"typeProperties": {
 							"notebook": {
 								"referenceName": {
-									"value": "nb_silver_to_gold_jobs",
+									"value": "nb_silver_to_gold_v2_jobs",
 									"type": "Expression"
 								},
 								"type": "NotebookReference"
