@@ -1,0 +1,1163 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "syn-job-market-dev"
+		},
+		"syn-job-market-dev-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'syn-job-market-dev-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:syn-job-market-dev.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"syn-job-market-dev-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stjobmarketdev01.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-job-market-dev-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('syn-job-market-dev-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-job-market-dev-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('syn-job-market-dev-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sql_create_vw_job_snapshots')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- ============================================================\n-- JOB MARKET INTELLIGENCE\n-- Synapse Serverless SQL\n-- Skrypt: sql_check_gold_snapshots\n-- ============================================================\n\n\n-- KROK 1. UTWORZENIE BAZY DANYCH\n-- Wykonane jednorazowo w bazie master.\n-- Baza job_market już istnieje.\n\n-- CREATE DATABASE job_market;\n\n\n-- ============================================================\n-- KROK 2. UTWORZENIE WIDOKU GOLD\n-- Wykonane jednorazowo w bazie job_market.\n-- Widok odczytuje pliki Parquet z Azure Data Lake.\n-- Gwiazdka (*) obejmuje również przyszłe snapshoty.\n-- ============================================================\n\n-- CREATE VIEW dbo.vw_job_snapshots\n-- AS\n-- SELECT\n--     REPLACE(jobs.filepath(1), 'snapshot_date=', '') AS snapshot_date,\n--     jobs.*\n-- FROM OPENROWSET(\n--     BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/fact_job_snapshots/snapshot_date=*/*.parquet',\n--     FORMAT = 'PARQUET'\n-- ) AS jobs;\n\n\n-- ============================================================\n-- KROK 3. KONTROLA DANYCH GOLD\n-- Aktywne zapytanie.\n-- Zwraca liczbę ofert dla każdego dnia.\n-- ============================================================\n\n-- SELECT\n--     snapshot_date,\n--     COUNT(*) AS liczba_ofert\n-- FROM dbo.vw_job_snapshots\n-- GROUP BY snapshot_date\n-- ORDER BY snapshot_date;\n\n\n-- ============================================================\n-- krok — kontrola duplikatów z danego dnia \n-- SELECT\n--     snapshot_date,\n--     COUNT(*) AS total_rows,\n--     COUNT(DISTINCT job_id) AS unique_jobs,\n--     COUNT(*) - COUNT(DISTINCT job_id) AS duplicate_rows\n-- FROM dbo.vw_job_snapshots\n-- GROUP BY snapshot_date\n-- ORDER BY snapshot_date;\n-- ============================================================\n\n-- ============================================================\n-- analiza powtarzających się ofert dla calej bazy\n-- SELECT\n--     COUNT(*) AS unique_jobs,\n--     SUM(appearances) AS total_observations,\n--     SUM(appearances - 1) AS repeated_observations,\n--     SUM(CASE WHEN appearances > 1 THEN 1 ELSE 0 END)\n--         AS jobs_seen_multiple_days,\n--     MAX(appearances) AS max_days_observed\n-- FROM (\n--     SELECT\n--         job_id,\n--         COUNT(*) AS appearances\n--     FROM dbo.vw_job_snapshots\n--     GROUP BY job_id\n-- ) AS offer_history;\n-- -- ============================================================\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "job_market",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/nb_bronze_to_silver_jobs')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "sparkjobmarket",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "fabe1c2b-8815-4d12-9feb-6f96eac85e8d"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"synapse_widget": {
+						"version": "0.1",
+						"state": {
+							"01aa7943-0b0e-446d-93f0-1aa1ed1af8e1": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"0": [],
+												"1": "Tester",
+												"2": "System Verification Poland",
+												"3": "https://cdn.solid.jobs/companies/logos/a1a57f48e0cb491eb8dcd4dfe508656d",
+												"4": "full_time",
+												"5": "<div class=\"well job - description\"><p><strong>Czym będziesz się zajmować?</strong><br><br><p><span style=\"color: rgb(0, 0, 0);\">We are looking for an Expert QA Engineer to step into a leadership role within our </span><strong style=\"color: rgb(0, 0, 0);\">Data Enablement Team</strong><span style=\"color: rgb(0, 0, 0);\">. In this position, you will be the driving force behind performance engineering with a strong emphasis on automation.</span></p><p><span style=\"color: rgb(0, 0, 0);\">As a QA Lead, you will direct software development teams, define comprehensive testing strategies, and ensure the highest product reliability before release. You will work in a dynamic Agile (SAFe) environment, driving the implementation of modern automation tools and best practices to optimize overall testing efficiency.</span></p><span>Your day-to-day responsibilities will include:</span><ul><li><strong style=\"color: rgb(0, 0, 0);\">Testing Strategy &amp; Leadership:</strong><span style=\"color: rgb(0, 0, 0);\"> Defining test strategies, planning, and executing testing phases while identifying areas for process improvement.</span></li><li><strong style=\"color: rgb(0, 0, 0);\">Hands-on Automation:</strong><span style=\"color: rgb(0, 0, 0);\"> Designing and implementing robust test automation scripts and day-to-day automated solutions using </span><strong style=\"color: rgb(0, 0, 0);\">Python</strong><span style=\"color: rgb(0, 0, 0);\"> and </span><strong style=\"color: rgb(0, 0, 0);\">Robot Framework</strong><span style=\"color: rgb(0, 0, 0);\">.</span></li><li><strong style=\"color: rgb(0, 0, 0);\">Requirement Analysis:</strong><span style=\"color: rgb(0, 0, 0);\"> Proactively analyzing and challenging project requirements when they lack clarity to ensure optimal delivery.</span></li><li><strong style=\"color: rgb(0, 0, 0);\">Test Management:</strong><span style=\"color: rgb(0, 0, 0);\"> Preparing test scenarios, managing test data, analyzing execution results, and reporting defects.</span></li><li><strong style=\"color: rgb(0, 0, 0);\">CI/CD Integration:</strong><span style=\"color: rgb(0, 0, 0);\"> Executing automated regression testing seamlessly through continuous integration pipelines.</span></li></ul><br><br><strong>Kogo poszukujemy?</strong><br><br><span>Must-Have Technical Experience:</span><ul><li><strong>Python:</strong> 7+ years of hands-on development/automation experience.</li><li><strong>Database Technologies:</strong> 7+ years of deep experience, including the confidence to write complex <strong>SQL</strong> queries.</li><li><strong>Robot Framework:</strong> 4+ years of practical experience.</li><li><strong>CI/CD &amp; Version Control:</strong> 4+ years of experience with CI/CD tools (e.g., Jenkins) and 5+ years with Git.</li></ul><span>Essential Skills &amp; Tools:</span><ul><li>Strong working proficiency with <strong>Linux</strong> and <strong>Bash</strong> scripting.</li><li>Proven experience with test management tools (qTest, Zephyr) and collaboration suites (Jira, Bitbucket, Jenkins/Bamboo).</li><li>Excellent analytical and problem-solving skills, with the ability to communicate effectively with Developers, Analysts, Product Owners, and Scrum Masters.</li></ul><span>Familiarity with Data &amp; Cloud Ecosystems:</span><ul><li>Understanding of distributed data processing engines like <strong>Spark</strong>.</li><li>Knowledge of the <strong>Hadoop ecosystem</strong> (Hive, Oozie, MapReduce, etc.).</li><li>Basic knowledge of <strong>AWS</strong> architectural components (Lambda, Step Functions, State Machines, etc.).</li></ul><span>Nice-to-have (Bonus points):</span><ul><li>Experience with containerization using <strong>Docker</strong>.</li><li>Knowledge of streaming and message queue technologies (e.g., <strong>KAFKA, IBM MQ</strong>).</li><li>Prior exposure to Scala/Spark.</li></ul><br><br><strong>Czego wymagamy?</strong><br><br><span>7 lat doświadczenia na podobnym stanowisku</span><br><span>Znajomości:</span><ul><li>Agile</li><li>Banking</li><li>qTest</li><li>Test automation</li><li>SQL</li><li>CI/CD</li><li>Linux</li><li>bash</li><li>Spark</li><li>Hadoop ecosystem</li><li>AWS</li><li>Docker</li></ul><span>Języki:</span><ul><li>Angielski</li></ul><br><br><strong>Jakie warunki i benefity otrzymasz?</strong><ul><li>23.5k–25.2k PLN netto/m (B2B)</li><li>B2B - Stałe godziny pracy (100%)</li><li>Praca zdalna: Hybrydowo</li></ul><br><br><strong>Kim jesteśmy?</strong><br>System Verification is a global software quality assurance company specialized in advanced quality monitoring and analytics. By using best practice QA methods and AI insights, we help our clients deliver great end-user experiences. Discover our recognized QA expertise and get a strategic partner that focus on innovation, efficiency and security.</p></div>",
+												"6": "IT",
+												"7": "Senior",
+												"8": "true",
+												"9": "false",
+												"10": "c1b25bb4-6bac-45ff-ab07-14126e5a99c4",
+												"11": [
+													{
+														"level": "Advanced",
+														"name": "Angielski"
+													}
+												],
+												"12": [
+													"Gdańsk"
+												],
+												"13": {
+													"employmentType": "B2B",
+													"to": 25200,
+													"from": 23500,
+													"currency": "PLN",
+													"period": "Month"
+												},
+												"15": [
+													{
+														"level": "Advanced",
+														"name": "Agile"
+													},
+													{
+														"level": "Advanced",
+														"name": "Banking"
+													},
+													{
+														"level": "Advanced",
+														"name": "qTest"
+													},
+													{
+														"level": "Advanced",
+														"name": "Test automation"
+													},
+													{
+														"level": "Advanced",
+														"name": "SQL"
+													},
+													{
+														"level": "Advanced",
+														"name": "CI/CD"
+													},
+													{
+														"level": "Advanced",
+														"name": "Linux"
+													},
+													{
+														"level": "Advanced",
+														"name": "bash"
+													},
+													{
+														"level": "Advanced",
+														"name": "Spark"
+													},
+													{
+														"level": "Advanced",
+														"name": "Hadoop ecosystem"
+													},
+													{
+														"level": "Advanced",
+														"name": "AWS"
+													},
+													{
+														"level": "Advanced",
+														"name": "Docker"
+													}
+												],
+												"16": "TestAutomationEngineer",
+												"17": "Lead QA Engineer (Automation & Performance Focus)",
+												"18": "2026-05-20T09:46:29.9635824+00:00",
+												"19": "https://solid.jobs/o/9x37g5ur/job-market-intelligence",
+												"20": "2026-05-20T09:46:29.9635824+00:00",
+												"21": "2026-11-22T12:30:10.3328909+00:00"
+											},
+											{
+												"0": [
+													"Budżet szkoleniowy",
+													"Szkolenia wewnętrzne",
+													"Wyjazdy na konferencje",
+													"Klasy językowe",
+													"Pakiet medyczny",
+													"Ubezpieczenie",
+													"Pakiet sportowy",
+													"Kawa / Herbata",
+													"Zimne napoje",
+													"Obiady",
+													"Parking",
+													"Parking rowerowy",
+													"Pokój relaksu",
+													"Pakiet relokacyjny",
+													"Płatny \"urlop\" dla B2B",
+													"Płatne \"chorobowe\" dla B2B"
+												],
+												"1": "OtherIT",
+												"2": "1dea",
+												"3": "https://cdn.solid.jobs/companies/logos/d2b80bf9c17e4164962b5c867f2bbccc",
+												"4": "full_time",
+												"5": "<div class=\"well job - description\"><p><strong>Czym będziesz się zajmować?</strong><br><br><ul><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Branża:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Bankowa / Finansowa</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Liczba wakatów:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> 1</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Lokalizacja:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Praca w 100% zdalna</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Data rozpoczęcia:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> ASAP (maksymalnie 1-miesięczny okres wypowiedzenia)</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Wynagrodzenie:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> 150 - 160 PLN netto + VAT / godzina (do negocjacji)</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Rodzaj umowy:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> B2B (outsourcing przez 1dea), pełny etat, współpraca długoterminowa</span></li></ul><span><span style=\"color: rgb(18, 41, 88); background-color: rgb(255, 255, 255);\">Zakres obowiązków:</span></span><ul><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Projektowanie i implementacja:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Budowa przepływów danych (ETL) w narzędziu Dataiku na potrzeby raportowania i rozwiązań AI.</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Samodzielna nawigacja:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Sprawne poruszanie się w ekosystemie Dataiku i optymalizacja procesów przetwarzania danych.</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Integracja systemów:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Współpraca przy migracji danych z systemów bankowych (T24) do chmury (S3).</span></li><li><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Standaryzacja:</strong><span style=\"color: inherit; background-color: rgb(255, 255, 255);\"> Zapewnienie wysokiej jakości i harmonizacji danych trafiających do systemów końcowych.</span></li></ul><br><br><strong>Kogo poszukujemy?</strong><br><br><p>Szukamy praktyków, którzy „zjedli zęby” na Dataiku i nie potrzebują instrukcji obsługi do każdego zadania.</p><ul><li><strong>Doświadczenie z Dataiku:</strong> Kluczowe jest realne, udokumentowane doświadczenie w pracy z tym narzędziem.</li><li><strong>Samodzielność:</strong> Umiejętność sprawnego i niezależnego realizowania zadań wewnątrz platformy.</li><li><strong>Praktyczna wiedza ETL:</strong> Rozumienie procesów integracji danych w skali enterprise.</li><li><strong>Znajomość AWS S3:</strong> Doświadczenie w pracy z danymi przechowywanymi w chmurze.</li><li>Język angielski: koniecznie komunikatywny w mowie i piśmie (codzienna praca w dużej części po angielsku, międzynarodowy projekt)</li></ul><blockquote><strong>Ważne:</strong> W swojej aplikacji prosimy o podanie liczby lat komercyjnego doświadczenia z Dataiku oraz krótki opis zakresu prac, jakie realizowałeś/aś w tym narzędziu.</blockquote><br><br><strong>Czego wymagamy?</strong><br><br><span>3 lata doświadczenia na podobnym stanowisku</span><br><span>Znajomości:</span><ul><li>Dataiku</li><li>S3</li><li>ETL</li><li>AWS S3</li><li>Data integration</li></ul><span>Mile widziane:</span><ul><li>T24</li></ul><span>Języki:</span><ul><li>Polski</li><li>Angielski</li></ul><br><br><strong>Jakie warunki i benefity otrzymasz?</strong><ul><li>25.2k–26.9k PLN netto/m (B2B)</li><li>B2B - Elastyczne godziny pracy (100%)</li><li>Praca zdalna: W całości</li><li>Budżet szkoleniowy, Szkolenia wewnętrzne, Wyjazdy na konferencje, Klasy językowe</li><li>Pakiet medyczny, Ubezpieczenie, Pakiet sportowy</li><li>Kawa / Herbata, Zimne napoje, Obiady</li><li>Parking, Parking rowerowy, Pokój relaksu</li><li>Pakiet relokacyjny</li><li>Płatny \"urlop\" dla B2B, Płatne \"chorobowe\" dla B2B</li></ul><br><br><strong>Kim jesteśmy?</strong><br>1dea is recruitment and IT outsourcing company focusing on expert and managerial positions.\n\nWe’re based in Poland but thanks to our international network, our capabilities are global. \n1dea covers the sectors of IT | Transport, Spedition, Logistics | Property & Construction | Tax & Legal. We thrive on excellence, priding ourselves on being a young, vibrant, creative and a fast growing.\n\nWant to find out more? Get in touch!</p></div>",
+												"6": "IT",
+												"7": "Senior",
+												"8": "false",
+												"9": "true",
+												"10": "1a1d8367-ce75-41fa-b127-e22de80a84f3",
+												"11": [
+													{
+														"level": "Expert",
+														"name": "Polski"
+													},
+													{
+														"level": "Advanced",
+														"name": "Angielski"
+													}
+												],
+												"12": [
+													"Warszawa"
+												],
+												"13": {
+													"employmentType": "B2B",
+													"to": 26900,
+													"from": 25200,
+													"currency": "PLN",
+													"period": "Month"
+												},
+												"15": [
+													{
+														"level": "Advanced",
+														"name": "Dataiku"
+													},
+													{
+														"level": "Advanced",
+														"name": "S3"
+													},
+													{
+														"level": "Advanced",
+														"name": "ETL"
+													},
+													{
+														"level": "Advanced",
+														"name": "AWS S3"
+													},
+													{
+														"level": "Advanced",
+														"name": "Data integration"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "T24"
+													}
+												],
+												"16": "OtherIT",
+												"17": "Specjalista Ds. Wdrożeń Dataiku (S3 / Dataiku Consultant)",
+												"18": "2026-05-19T13:46:04.6813402+00:00",
+												"19": "https://solid.jobs/o/roembr7k/job-market-intelligence",
+												"20": "2026-05-19T13:46:04.6813402+00:00",
+												"21": "2026-11-21T17:30:08.6007331+00:00"
+											},
+											{
+												"0": [
+													"Budżet szkoleniowy",
+													"Szkolenia wewnętrzne",
+													"Wyjazdy na konferencje",
+													"Klasy językowe",
+													"Pakiet medyczny",
+													"Ubezpieczenie",
+													"Pakiet sportowy",
+													"Kawa / Herbata",
+													"Zimne napoje",
+													"Obiady",
+													"Parking",
+													"Parking rowerowy",
+													"Pokój relaksu",
+													"Pakiet relokacyjny",
+													"Płatny \"urlop\" dla B2B",
+													"Płatne \"chorobowe\" dla B2B"
+												],
+												"1": "DevOps",
+												"2": "1dea",
+												"3": "https://cdn.solid.jobs/companies/logos/d2b80bf9c17e4164962b5c867f2bbccc",
+												"4": "full_time",
+												"5": "<div class=\"well job - description\"><p><strong>Czym będziesz się zajmować?</strong><br><br><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Obszar: </strong><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">Consulting IT</span></p><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Lokalizacja: </strong><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">100% zdalnie</span></p><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Start: </strong><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">ASAP (akceptujemy kandydatury z max 1msc okresem wypowiedzenia)</span></p><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Stawka (ustalana indywidualnie):</strong><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\"> </span><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">150 - 165 PLN netto + VAT / h</strong></p><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Zaangażowanie:</strong><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\"> B2B (outsourcing z 1dea), full-time, długofalowo</span></p><p></p><p><strong style=\"color: inherit; background-color: rgb(255, 255, 255);\">Proces rekrutacyjny (100% zdalnie):</strong></p><ul><li><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">Krótka rozmowa telefoniczna informacyjno-zapoznawcza z rekruterem 1dea (~10 min)</span></li><li><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">Weryfikacja techniczno-projektowa z Klientem (~1 - 1,5 h)</span></li><li><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">(Jeśli OK) Rozmowa zapoznawcza z przedstawicielem projektu u Klienta końcowego (~ 30 min)</span></li><li><span style=\"color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);\">Decyzja o podjęciu współpracy</span></li></ul><span></span><span><span style=\"color: rgb(18, 41, 88); background-color: rgb(255, 255, 255);\">Zakres obowiązków</span></span><ul><li><span style=\"color: inherit; background-color: rgb(255, 255, 255);\">Projektowanie, wdrażanie i utrzymanie stabilnej infrastruktury w chmurze AWS.</span></li><li><span style=\"color: inherit; background-color: rgb(255, 255, 255);\">Zarządzanie środowiskami systemowymi i dbanie o ich optymalną wydajność.</span></li><li><span style=\"color: inherit; background-color: rgb(255, 255, 255);\">Automatyzacja procesów wdrażania oraz monitorowanie systemów.</span></li><li><span style=\"color: inherit; background-color: rgb(255, 255, 255);\">Współpraca z zespołami programistycznymi w celu optymalizacji aplikacji pod kątem architektury chmurowej.</span></li></ul><br><br><strong>Kogo poszukujemy?</strong><br><br><ul><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">4+ letnie komercyjne doświadczenie jako AWS Cloud Engineer</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> (potwierdzone praktyczną znajomością usług AWS)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Biegła znajomość i doświadczenie w pracy z systemami operacyjnymi:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Unix, Linux, Windows oraz AIX</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Zdolność analitycznego myślenia i rozwiązywania złożonych problemów technicznych</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Znajomość języka angielskiego na poziomie umożliwiającym pracę z dokumentacją i komunikację w zespole międzynarodowym (B2+)</span></li></ul><h3></h3><h3><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Mile widziane:</strong></h3><ul><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Znajomość języka </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Java</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> (mile widziane wsparcie przy analizie kodu/wdrożeniach)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Doświadczenie w pracy z rozwiązaniami typu </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">COTS</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> (Commercial Off-The-Shelf)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Doświadczenie w </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">administracji bazami danych</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> (Database Administration)</span></li></ul><br><br><strong>Czego wymagamy?</strong><br><br><span>4 lata doświadczenia na podobnym stanowisku</span><br><span>Znajomości:</span><ul><li>Cloud</li><li>AWS</li><li>Unix</li><li>Linux</li><li>AIX</li></ul><span>Mile widziane:</span><ul><li>Java</li><li>COTS</li><li>DBA</li></ul><span>Języki:</span><ul><li>Polski</li><li>Angielski</li></ul><br><br><strong>Jakie warunki i benefity otrzymasz?</strong><ul><li>25.2k–27.7k PLN netto/m (B2B)</li><li>B2B - Elastyczne godziny pracy (100%)</li><li>Praca zdalna: W całości</li><li>Budżet szkoleniowy, Szkolenia wewnętrzne, Wyjazdy na konferencje, Klasy językowe</li><li>Pakiet medyczny, Ubezpieczenie, Pakiet sportowy</li><li>Kawa / Herbata, Zimne napoje, Obiady</li><li>Parking, Parking rowerowy, Pokój relaksu</li><li>Pakiet relokacyjny</li><li>Płatny \"urlop\" dla B2B, Płatne \"chorobowe\" dla B2B</li></ul><br><br><strong>Kim jesteśmy?</strong><br>1dea is recruitment and IT outsourcing company focusing on expert and managerial positions.\n\nWe’re based in Poland but thanks to our international network, our capabilities are global. \n1dea covers the sectors of IT | Transport, Spedition, Logistics | Property & Construction | Tax & Legal. We thrive on excellence, priding ourselves on being a young, vibrant, creative and a fast growing.\n\nWant to find out more? Get in touch!</p></div>",
+												"6": "IT",
+												"7": "Senior",
+												"8": "false",
+												"9": "true",
+												"10": "8f88eb77-b152-4697-ac20-6f59c9930e80",
+												"11": [
+													{
+														"level": "Expert",
+														"name": "Polski"
+													},
+													{
+														"level": "Advanced",
+														"name": "Angielski"
+													}
+												],
+												"12": [
+													"Warszawa"
+												],
+												"13": {
+													"employmentType": "B2B",
+													"to": 27700,
+													"from": 25200,
+													"currency": "PLN",
+													"period": "Month"
+												},
+												"15": [
+													{
+														"level": "Advanced",
+														"name": "Cloud"
+													},
+													{
+														"level": "Advanced",
+														"name": "AWS"
+													},
+													{
+														"level": "Advanced",
+														"name": "Unix"
+													},
+													{
+														"level": "Advanced",
+														"name": "Linux"
+													},
+													{
+														"level": "Advanced",
+														"name": "AIX"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "Java"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "COTS"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "DBA"
+													}
+												],
+												"16": "DevOps",
+												"17": "DevOps Engineer (AWS | Linux | Unix | Java)",
+												"18": "2026-05-19T13:45:19.5304199+00:00",
+												"19": "https://solid.jobs/o/93f20h6h/job-market-intelligence",
+												"20": "2026-05-19T13:45:19.5304199+00:00",
+												"21": "2026-11-21T17:30:05.4867095+00:00"
+											},
+											{
+												"0": [
+													"Budżet szkoleniowy",
+													"Szkolenia wewnętrzne",
+													"Wyjazdy na konferencje",
+													"Klasy językowe",
+													"Pakiet medyczny",
+													"Ubezpieczenie",
+													"Pakiet sportowy",
+													"Kawa / Herbata",
+													"Zimne napoje",
+													"Obiady",
+													"Parking",
+													"Parking rowerowy",
+													"Pokój relaksu",
+													"Pakiet relokacyjny",
+													"Płatny \"urlop\" dla B2B",
+													"Płatne \"chorobowe\" dla B2B"
+												],
+												"1": "Security",
+												"2": "1dea",
+												"3": "https://cdn.solid.jobs/companies/logos/d2b80bf9c17e4164962b5c867f2bbccc",
+												"4": "full_time",
+												"5": "<div class=\"well job - description\"><p><strong>Czym będziesz się zajmować?</strong><br><br><ul><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Branża:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Cybersecurity</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Liczba wakatów:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> 1</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Lokalizacja:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Praca w 100% zdalna</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Data rozpoczęcia:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> ASAP (maksymalnie 3-miesięczny okres wypowiedzenia)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Wynagrodzenie:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> 160 - 200 PLN netto + VAT / godzina (do negocjacji)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Rodzaj umowy:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> B2B (outsourcing przez 1dea), pełny etat, współpraca długoterminowa</span></li></ul><h3>---</h3><p></p><h3><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Twoje kluczowe zadania</strong></h3><ul><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Discovery i kwalifikacja szans:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Udział w warsztatach i spotkaniach z potencjalnymi klientami, diagnozowanie ich potrzeb biznesowych, ryzyk oraz dojrzałości technologicznej</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Projektowanie rozwiązań (Scoping):</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Przekładanie wymagań klienta na precyzyjne propozycje usług z obszaru bezpieczeństwa ofensywnego, defensywnego oraz doradztwa GRC</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Wsparcie ofertowania:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Tworzenie zakresów prac (SoW), szacowanie pracochłonności, opracowywanie sekcji technicznych w odpowiedziach na zapytania ofertowe (RFP/RFI)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Zgodność i regulacje:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Doradzanie klientom, jak nasze usługi mapują się na wymogi regulacyjne takie jak </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">NIS2, DORA, ISO 27001</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> czy wytyczne KNF</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Współpraca z dostawą:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Ścisła koordynacja z zespołami technicznymi, aby zapewnić, że sprzedane rozwiązania są możliwe do realizacji i zgodne z naszymi standardami jakości</span></li></ul><br><br><strong>Kogo poszukujemy?</strong><br><br><ul><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Minimum 3-letnie doświadczenie w roli Pre-Sales, Sales Engineering lub konsultingu technicznego w branży cyberbezpieczeństwa</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Praktyczna wiedza o usługach cybersecurity (testy penetracyjne, AppSec, GRC, monitoring)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Znajomość realiów regulacyjnych (</span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">NIS2, DORA, RODO, ISO 27001</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Umiejętność prowadzenia prezentacji i rozmów zarówno z kadrą zarządzającą (C-level), jak i specjalistami technicznymi</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Zmysł komercyjny – umiejętność balansowania potrzeb klienta z rentownością projektu</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Bardzo dobra znajomość </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">języka polskiego i angielskiego</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> w mowie i piśmie</span></li></ul><h3></h3><h3><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Mile widziane</strong></h3><ul><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Doświadczenie w pracy dla MSSP, firm doradczych lub butików bezpieczeństwa ofensywnego</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Znajomość specyfiki sektorów regulowanych (finanse, infrastruktura krytyczna, SaaS, przemysł)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Istniejąca sieć kontaktów wśród CISO i liderów bezpieczeństwa w Polsce</span></li></ul><br><br><strong>Czego wymagamy?</strong><br><br><span>3 lata doświadczenia na podobnym stanowisku</span><br><span>Znajomości:</span><ul><li>Pre-sales</li><li>Security</li><li>Cybersecurity</li></ul><span>Mile widziane:</span><ul><li>NIS2</li><li>DORA</li><li>ISO 27001</li><li>Business commucation</li></ul><span>Języki:</span><ul><li>Polski</li><li>Angielski</li></ul><br><br><strong>Jakie warunki i benefity otrzymasz?</strong><ul><li>26.9k–33.6k PLN netto/m (B2B)</li><li>B2B - Elastyczne godziny pracy (100%)</li><li>Praca zdalna: W całości</li><li>Budżet szkoleniowy, Szkolenia wewnętrzne, Wyjazdy na konferencje, Klasy językowe</li><li>Pakiet medyczny, Ubezpieczenie, Pakiet sportowy</li><li>Kawa / Herbata, Zimne napoje, Obiady</li><li>Parking, Parking rowerowy, Pokój relaksu</li><li>Pakiet relokacyjny</li><li>Płatny \"urlop\" dla B2B, Płatne \"chorobowe\" dla B2B</li></ul><br><br><strong>Kim jesteśmy?</strong><br>1dea is recruitment and IT outsourcing company focusing on expert and managerial positions.\n\nWe’re based in Poland but thanks to our international network, our capabilities are global. \n1dea covers the sectors of IT | Transport, Spedition, Logistics | Property & Construction | Tax & Legal. We thrive on excellence, priding ourselves on being a young, vibrant, creative and a fast growing.\n\nWant to find out more? Get in touch!</p></div>",
+												"6": "IT",
+												"7": "Senior",
+												"8": "false",
+												"9": "true",
+												"10": "864f2cb7-8f69-472c-b1b5-67dda2bd3479",
+												"11": [
+													{
+														"level": "Expert",
+														"name": "Polski"
+													},
+													{
+														"level": "Advanced",
+														"name": "Angielski"
+													}
+												],
+												"12": [
+													"Warszawa"
+												],
+												"13": {
+													"employmentType": "B2B",
+													"to": 33600,
+													"from": 26900,
+													"currency": "PLN",
+													"period": "Month"
+												},
+												"15": [
+													{
+														"level": "Expert",
+														"name": "Pre-sales"
+													},
+													{
+														"level": "Advanced",
+														"name": "Security"
+													},
+													{
+														"level": "Advanced",
+														"name": "Cybersecurity"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "NIS2"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "DORA"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "ISO 27001"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "Business commucation"
+													}
+												],
+												"16": "Security",
+												"17": "Pre-Sales Security Engineer",
+												"18": "2026-05-19T13:45:15.8967409+00:00",
+												"19": "https://solid.jobs/o/fhbk3lc8/job-market-intelligence",
+												"20": "2026-05-19T13:45:15.8967409+00:00",
+												"21": "2026-11-21T17:30:07.2141462+00:00"
+											},
+											{
+												"0": [
+													"Budżet szkoleniowy",
+													"Szkolenia wewnętrzne",
+													"Wyjazdy na konferencje",
+													"Klasy językowe",
+													"Pakiet medyczny",
+													"Ubezpieczenie",
+													"Pakiet sportowy",
+													"Kawa / Herbata",
+													"Zimne napoje",
+													"Obiady",
+													"Parking",
+													"Parking rowerowy",
+													"Pokój relaksu",
+													"Pakiet relokacyjny",
+													"Płatny \"urlop\" dla B2B",
+													"Płatne \"chorobowe\" dla B2B"
+												],
+												"1": "Developer",
+												"2": "1dea",
+												"3": "https://cdn.solid.jobs/companies/logos/d2b80bf9c17e4164962b5c867f2bbccc",
+												"4": "full_time",
+												"5": "<div class=\"well job - description\"><p><strong>Czym będziesz się zajmować?</strong><br><br><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Obszar: </strong><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">Consulting IT</span></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Lokalizacja: </strong><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">100% zdalnie</span></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Start: </strong><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">ASAP (max 3msc okres wypowiedzenia)</span></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Stawka (ustalana indywidualnie):</strong><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\"> </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">155 - 165 PLN netto + VAT / h</strong></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Zaangażowanie:</strong><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\"> B2B (outsourcing z 1dea), full-time, długofalowo</span></p><p></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Proces rekrutacyjny (100% zdalnie):</strong></p><ul><li><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">Krótka rozmowa telefoniczna informacyjno-zapoznawcza z rekruterem 1dea (~10 min)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">Weryfikacja techniczno-projektowa z Klientem (~1 - 1,5 h)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">(Jeśli OK) Rozmowa zapoznawcza z przedstawicielem projektu u Klienta końcowego (~ 30 min)</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);\">Decyzja o podjęciu współpracy</span></li></ul><span></span><span><span style=\"background-color: rgb(255, 255, 255); color: rgb(18, 41, 88);\">Zakres obowiązków</span></span><ul><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Projektowanie i architektura:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Tworzenie skalowalnych, niezawodnych i efektywnych kosztowo platform oraz pipeline&#39;ów danych dopasowanych do potrzeb biznesu</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Wdrożenie (Hands-on):</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Budowanie i optymalizacja zaawansowanych procesów przetwarzania danych strukturyzowanych i niestrukturyzowanych (end-to-end: od ingestii po warstwę konsumpcyjną)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Standardy i jakość:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Wyznaczanie standardów architektonicznych, dbanie o Data Quality, bezpieczeństwo (Security &amp; Compliance) oraz najlepsze praktyki w zespole</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Liderstwo techniczne:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Mentoring młodszych inżynierów, wsparcie techniczne dla cross-funkcjonalnych zespołów oraz przekładanie wymagań biznesowych na architekturę IT</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Rozwiązywanie krytycznych incydentów produkcyjnych i zapewnianie wysokiej dostępności systemów danych</span></li></ul><br><br><strong>Kogo poszukujemy?</strong><br><br><ul><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Minimum 5 lat doświadczenia</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> w inżynierii danych, łączącego projektowanie rozwiązań z ich samodzielnym wdrażaniem</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Ekspercka znajomość Python:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Pisanie czystego, modułowego kodu gotowego na środowiska produkcyjne</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Big Data &amp; Ecosystem:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Silne doświadczenie z </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">PySpark</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> oraz systemami rozproszonego przetwarzania danych (np. Databricks, Spark)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Architektura danych:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Głębokie zrozumienie i praktyka w projektowaniu struktur typu </span><em style=\"background-color: rgb(255, 255, 255); color: inherit;\">Data Lake, Lakehouse</em><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> oraz </span><em style=\"background-color: rgb(255, 255, 255); color: inherit;\">Medallion Architecture</em></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Cloud Expertise:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Praktyczna znajomość usług danych w chmurze (</span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">AWS, Azure lub GCP</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Orkiestracja i SQL:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Doświadczenie z narzędziami do orkiestracji (np. </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Apache Airflow, Prefect</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">) oraz zaawansowany SQL (bazy relacyjne i NoSQL)</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">DevOps dla Data:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> Dobre zrozumienie praktyk CI/CD, kontroli wersji (Git) i automatyzacji pipeline&#39;ów</span></li><li><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Angielski:</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> komunikatywny w mowie i piśmie - poziom B2+</span></li></ul><p></p><p><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Mile widziane (bonusy):</strong></p><ul><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Zaawansowana znajomość </span><strong style=\"background-color: rgb(255, 255, 255); color: inherit;\">Databricks</strong><span style=\"background-color: rgb(255, 255, 255); color: inherit;\"> (Delta Lake, MLflow, optymalizacja wydajności).</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Znajomość technik modelowania danych (modele dymensjonalne i znormalizowane) oraz frameworków Data Governance.</span></li><li><span style=\"background-color: rgb(255, 255, 255); color: inherit;\">Orientacja w pipeline&#39;ach dla Data Science / Machine Learning.</span></li></ul><br><br><strong>Czego wymagamy?</strong><br><br><span>5 lat doświadczenia na podobnym stanowisku</span><br><span>Znajomości:</span><ul><li>Data Engineering</li><li>Python</li><li>PySpark</li><li>Data Lakes</li><li>Cloud</li><li>Airflow</li></ul><span>Mile widziane:</span><ul><li>Databricks</li><li>AWS</li><li>Azure</li><li>GCP</li><li>ML</li></ul><span>Języki:</span><ul><li>Polski</li><li>Angielski</li></ul><br><br><strong>Jakie warunki i benefity otrzymasz?</strong><ul><li>26k–27.7k PLN netto/m (B2B)</li><li>B2B - Elastyczne godziny pracy (100%)</li><li>Praca zdalna: W całości</li><li>Budżet szkoleniowy, Szkolenia wewnętrzne, Wyjazdy na konferencje, Klasy językowe</li><li>Pakiet medyczny, Ubezpieczenie, Pakiet sportowy</li><li>Kawa / Herbata, Zimne napoje, Obiady</li><li>Parking, Parking rowerowy, Pokój relaksu</li><li>Pakiet relokacyjny</li><li>Płatny \"urlop\" dla B2B, Płatne \"chorobowe\" dla B2B</li></ul><br><br><strong>Kim jesteśmy?</strong><br>1dea is recruitment and IT outsourcing company focusing on expert and managerial positions.\n\nWe’re based in Poland but thanks to our international network, our capabilities are global. \n1dea covers the sectors of IT | Transport, Spedition, Logistics | Property & Construction | Tax & Legal. We thrive on excellence, priding ourselves on being a young, vibrant, creative and a fast growing.\n\nWant to find out more? Get in touch!</p></div>",
+												"6": "IT",
+												"7": "Senior",
+												"8": "false",
+												"9": "true",
+												"10": "97e4f3bd-520c-43ec-b04f-6af4aca2d0bb",
+												"11": [
+													{
+														"level": "Expert",
+														"name": "Polski"
+													},
+													{
+														"level": "Advanced",
+														"name": "Angielski"
+													}
+												],
+												"12": [
+													"Warszawa"
+												],
+												"13": {
+													"employmentType": "B2B",
+													"to": 27700,
+													"from": 26000,
+													"currency": "PLN",
+													"period": "Month"
+												},
+												"15": [
+													{
+														"level": "Advanced",
+														"name": "Data Engineering"
+													},
+													{
+														"level": "Advanced",
+														"name": "Python"
+													},
+													{
+														"level": "Advanced",
+														"name": "PySpark"
+													},
+													{
+														"level": "Advanced",
+														"name": "Data Lakes"
+													},
+													{
+														"level": "Advanced",
+														"name": "Cloud"
+													},
+													{
+														"level": "Advanced",
+														"name": "Airflow"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "Databricks"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "AWS"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "Azure"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "GCP"
+													},
+													{
+														"level": "NiceToHave",
+														"name": "ML"
+													}
+												],
+												"16": "Python",
+												"17": "Lead Data Engineer (Python | Pyspark | Databricks)",
+												"18": "2026-05-19T13:44:59.1577602+00:00",
+												"19": "https://solid.jobs/o/rriby4ls/job-market-intelligence",
+												"20": "2026-05-19T13:44:59.1577602+00:00",
+												"21": "2026-11-21T17:30:08.8540246+00:00"
+											}
+										],
+										"schema": [
+											{
+												"key": "0",
+												"name": "benefits",
+												"type": "ArrayType(StringType,true)"
+											},
+											{
+												"key": "1",
+												"name": "category",
+												"type": "string"
+											},
+											{
+												"key": "2",
+												"name": "company",
+												"type": "string"
+											},
+											{
+												"key": "3",
+												"name": "companyLogoUrl",
+												"type": "string"
+											},
+											{
+												"key": "4",
+												"name": "contractTime",
+												"type": "string"
+											},
+											{
+												"key": "5",
+												"name": "description",
+												"type": "string"
+											},
+											{
+												"key": "6",
+												"name": "division",
+												"type": "string"
+											},
+											{
+												"key": "7",
+												"name": "experienceLevel",
+												"type": "string"
+											},
+											{
+												"key": "8",
+												"name": "isHybrid",
+												"type": "boolean"
+											},
+											{
+												"key": "9",
+												"name": "isRemote",
+												"type": "boolean"
+											},
+											{
+												"key": "10",
+												"name": "jobOfferKey",
+												"type": "string"
+											},
+											{
+												"key": "11",
+												"name": "languages",
+												"type": "ArrayType(StructType(StructField(level,StringType,true),StructField(name,StringType,true)),true)"
+											},
+											{
+												"key": "12",
+												"name": "locations",
+												"type": "ArrayType(StringType,true)"
+											},
+											{
+												"key": "13",
+												"name": "salary",
+												"type": "StructType(StructField(currency,StringType,true),StructField(employmentType,StringType,true),StructField(from,DoubleType,true),StructField(period,StringType,true),StructField(to,DoubleType,true))"
+											},
+											{
+												"key": "14",
+												"name": "secondarySalary",
+												"type": "StructType(StructField(currency,StringType,true),StructField(employmentType,StringType,true),StructField(from,DoubleType,true),StructField(period,StringType,true),StructField(to,DoubleType,true))"
+											},
+											{
+												"key": "15",
+												"name": "skills",
+												"type": "ArrayType(StructType(StructField(level,StringType,true),StructField(name,StringType,true)),true)"
+											},
+											{
+												"key": "16",
+												"name": "subCategory",
+												"type": "string"
+											},
+											{
+												"key": "17",
+												"name": "title",
+												"type": "string"
+											},
+											{
+												"key": "18",
+												"name": "updatedAt",
+												"type": "string"
+											},
+											{
+												"key": "19",
+												"name": "url",
+												"type": "string"
+											},
+											{
+												"key": "20",
+												"name": "validFrom",
+												"type": "string"
+											},
+											{
+												"key": "21",
+												"name": "validTo",
+												"type": "string"
+											}
+										],
+										"truncated": false
+									},
+									"isSummary": false,
+									"language": "scala",
+									"wranglerEntryContext": {
+										"dataframeType": "pyspark"
+									}
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "count",
+											"categoryFieldKeys": [
+												"1"
+											],
+											"seriesFieldKeys": [
+												"0"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							}
+						}
+					},
+					"enableDebugMode": false,
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/6875da89-2389-4037-9f5d-efe00acba6b2/resourceGroups/rg-job-market-dev/providers/Microsoft.Synapse/workspaces/syn-job-market-dev/bigDataPools/sparkjobmarket",
+						"name": "sparkjobmarket",
+						"type": "Spark",
+						"endpoint": "https://syn-job-market-dev.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkjobmarket",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net",
+							"authHeader": null
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"extraHeader": null
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"snapshot = \"2026-10-26\"\n",
+							"run_id = \"20261026T101729704882Z\""
+						],
+						"outputs": []
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"print(\"=== PARAMETRY URUCHOMIENIA ===\")\n",
+							"print(f\"Snapshot date: {snapshot}\")\n",
+							"print(f\"Run ID: {run_id}\")\n",
+							"print(\"Parametry domyślne mogą zostać nadpisane przez Azure Data Factory.\")\n",
+							"print(\"=============================\")"
+						],
+						"outputs": []
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"\n",
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"account = \"stjobmarketdev01\"\n",
+							"\n",
+							"base_path = f\"abfss://bronze@{account}.dfs.core.windows.net\"\n",
+							"input_path = (\n",
+							"    f\"{base_path}/source=solidjobs/\"\n",
+							"    f\"snapshot_date={snapshot}/run_id={run_id}/\"\n",
+							"    \"offers_page_*.json\"\n",
+							")\n",
+							"\n",
+							"raw = spark.read.option(\"multiLine\", True).json(input_path)\n",
+							"\n",
+							"jobs = (\n",
+							"    raw.select(F.explode(\"jobs\").alias(\"job\"))\n",
+							"       .select(\"job.*\")\n",
+							")\n",
+							"\n",
+							"print(\"Liczba ofert:\", jobs.count())\n",
+							"jobs.printSchema()\n",
+							"display(jobs.limit(5))\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"\n",
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"# ==========================================\n",
+							"# 1. PRZYGOTOWANIE WARSTWY SILVER\n",
+							"# ==========================================\n",
+							"\n",
+							"silver = (\n",
+							"    jobs\n",
+							"    .withColumn(\"source\", F.lit(\"solidjobs\"))\n",
+							"    .withColumn(\"snapshot_date\", F.lit(snapshot))\n",
+							"    .withColumn(\"run_id\", F.lit(run_id))\n",
+							"    .withColumn(\n",
+							"        \"processed_at\",\n",
+							"        F.current_timestamp()\n",
+							"    )\n",
+							")\n",
+							"\n",
+							"# ==========================================\n",
+							"# 2. ŚCIEŻKA DO AZURE ADLS GEN2\n",
+							"# ==========================================\n",
+							"\n",
+							"output_path = (\n",
+							"    f\"abfss://silver@{account}.dfs.core.windows.net/\"\n",
+							"    f\"jobs/source=solidjobs/\"\n",
+							"    f\"snapshot_date={snapshot}/\"\n",
+							"    f\"run_id={run_id}/\"\n",
+							")\n",
+							"\n",
+							"# ==========================================\n",
+							"# 3. SPRAWDZENIE ISTNIEJĄCEGO SNAPSHOTU\n",
+							"# ==========================================\n",
+							"\n",
+							"hadoop_conf = spark._jsc.hadoopConfiguration()\n",
+							"\n",
+							"path = spark._jvm.org.apache.hadoop.fs.Path(\n",
+							"    output_path\n",
+							")\n",
+							"\n",
+							"success_path = spark._jvm.org.apache.hadoop.fs.Path(\n",
+							"    output_path.rstrip(\"/\") + \"/_SUCCESS\"\n",
+							")\n",
+							"\n",
+							"fs = path.getFileSystem(hadoop_conf)\n",
+							"\n",
+							"# ==========================================\n",
+							"# 4. ZAPIS PARQUET\n",
+							"# ==========================================\n",
+							"\n",
+							"if fs.exists(success_path):\n",
+							"\n",
+							"    print(\"Snapshot już istnieje w Silver.\")\n",
+							"    print(\"Pomijam ponowny zapis.\")\n",
+							"\n",
+							"elif fs.exists(path):\n",
+							"\n",
+							"    raise RuntimeError(\n",
+							"        \"Katalog Silver istnieje, \"\n",
+							"        \"ale brakuje pliku _SUCCESS. \"\n",
+							"        \"Możliwy niekompletny zapis.\"\n",
+							"    )\n",
+							"\n",
+							"else:\n",
+							"\n",
+							"    (\n",
+							"        silver.write\n",
+							"        .mode(\"errorifexists\")\n",
+							"        .parquet(output_path)\n",
+							"    )\n",
+							"\n",
+							"    print(\"Nowy snapshot zapisany do Silver.\")\n",
+							"\n",
+							"# ==========================================\n",
+							"# 5. PODSUMOWANIE\n",
+							"# ==========================================\n",
+							"\n",
+							"print(\"Liczba rekordów wejściowych:\", silver.count())\n",
+							"print(\"Snapshot:\", snapshot)\n",
+							"print(\"Run ID:\", run_id)\n",
+							"print(\"Lokalizacja:\", output_path)\n",
+							"\n",
+							"print(\"PRZETWARZANIE ZAKOŃCZONE\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 2
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/nb_silver_to_gold_jobs')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "sparkjobmarket",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "ce975cac-d398-4fa2-862f-e3cb87c60039"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"synapse_widget": {
+						"version": "0.1"
+					},
+					"enableDebugMode": false,
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/6875da89-2389-4037-9f5d-efe00acba6b2/resourceGroups/rg-job-market-dev/providers/Microsoft.Synapse/workspaces/syn-job-market-dev/bigDataPools/sparkjobmarket",
+						"name": "sparkjobmarket",
+						"type": "Spark",
+						"endpoint": "https://syn-job-market-dev.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/sparkjobmarket",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net",
+							"authHeader": null
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"extraHeader": null
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"# ==========================================\n",
+							"# 1. KONFIGURACJA SILVER -> GOLD\n",
+							"# ==========================================\n",
+							"\n",
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"account = \"stjobmarketdev01\"\n",
+							"silver_base = f\"abfss://silver@{account}.dfs.core.windows.net/jobs/source=solidjobs/\"\n",
+							"gold_base = f\"abfss://gold@{account}.dfs.core.windows.net/jobs/fact_job_snapshots/\"\n",
+							"\n",
+							"Path = spark._jvm.org.apache.hadoop.fs.Path\n",
+							"hadoop_conf = spark._jsc.hadoopConfiguration()\n",
+							"silver_fs = Path(silver_base).getFileSystem(hadoop_conf)\n",
+							"gold_fs = Path(gold_base).getFileSystem(hadoop_conf)\n",
+							"\n",
+							"print(\"SILVER:\", silver_base)\n",
+							"print(\"GOLD:\", gold_base)\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# ==========================================\n",
+							"# 2. WYBÓR NAJNOWSZEGO UKOŃCZONEGO RUN_ID\n",
+							"#    DLA KAŻDEGO DNIA\n",
+							"# ==========================================\n",
+							"\n",
+							"selected_snapshots = []\n",
+							"\n",
+							"for day in silver_fs.listStatus(Path(silver_base)):\n",
+							"    if not day.isDirectory():\n",
+							"        continue\n",
+							"    day_path = day.getPath()\n",
+							"    day_name = day_path.getName()\n",
+							"    if not day_name.startswith(\"snapshot_date=\"):\n",
+							"        continue\n",
+							"\n",
+							"    date_value = day_name.removeprefix(\"snapshot_date=\")\n",
+							"    completed = []\n",
+							"    for run in silver_fs.listStatus(day_path):\n",
+							"        if not run.isDirectory():\n",
+							"            continue\n",
+							"        run_path = run.getPath()\n",
+							"        if not run_path.getName().startswith(\"run_id=\"):\n",
+							"            continue\n",
+							"        success_path = Path(str(run_path).rstrip(\"/\") + \"/_SUCCESS\")\n",
+							"        if silver_fs.exists(success_path):\n",
+							"            completed.append(run_path)\n",
+							"\n",
+							"    if completed:\n",
+							"        latest = max(completed, key=lambda p: p.getName())\n",
+							"        selected_snapshots.append((date_value, str(latest)))\n",
+							"\n",
+							"selected_snapshots.sort(key=lambda item: item[0])\n",
+							"if not selected_snapshots:\n",
+							"    raise RuntimeError(\"Brak ukończonych snapshotów Silver (_SUCCESS).\")\n",
+							"\n",
+							"for snapshot_date, snapshot_path in selected_snapshots:\n",
+							"    print(\"Silver:\", snapshot_date, snapshot_path)\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# ==========================================\n",
+							"# 3. WALIDACJA I ZAPIS FACT_JOB_SNAPSHOTS\n",
+							"# ==========================================\n",
+							"\n",
+							"written_dates = []\n",
+							"skipped_dates = []\n",
+							"\n",
+							"for snapshot_date, snapshot_path in selected_snapshots:\n",
+							"    output_path = gold_base + f\"snapshot_date={snapshot_date}/\"\n",
+							"    output_dir = Path(output_path)\n",
+							"    success_path = Path(output_path + \"_SUCCESS\")\n",
+							"\n",
+							"    # Idempotencja: kompletny dzień pomijamy bez odczytywania Parquet.\n",
+							"    if gold_fs.exists(success_path):\n",
+							"        print(f\"{snapshot_date}: Gold istnieje (_SUCCESS) — pomijam.\")\n",
+							"        skipped_dates.append(snapshot_date)\n",
+							"        continue\n",
+							"\n",
+							"    # Nie nadpisujemy nawet częściowo utworzonego katalogu.\n",
+							"    if gold_fs.exists(output_dir):\n",
+							"        raise RuntimeError(\n",
+							"            f\"{snapshot_date}: katalog Gold istnieje, ale brak _SUCCESS. \"\n",
+							"            \"Wymagana ręczna diagnostyka — niczego nie nadpisuję.\"\n",
+							"        )\n",
+							"\n",
+							"    # Jeden zweryfikowany snapshot Silver na dzień.\n",
+							"    daily_jobs = spark.read.parquet(snapshot_path)\n",
+							"    gold_jobs = daily_jobs.select(\n",
+							"        F.lit(snapshot_date).alias(\"snapshot_date\"),\n",
+							"        F.col(\"jobOfferKey\").alias(\"job_id\"),\n",
+							"        F.col(\"title\"),\n",
+							"        F.col(\"company\"),\n",
+							"        F.col(\"category\"),\n",
+							"        F.col(\"experienceLevel\"),\n",
+							"        F.col(\"isRemote\"),\n",
+							"        F.col(\"isHybrid\"),\n",
+							"        F.col(\"salary.from\").alias(\"salary_from\"),\n",
+							"        F.col(\"salary.to\").alias(\"salary_to\"),\n",
+							"        F.col(\"salary.currency\").alias(\"salary_currency\"),\n",
+							"        F.col(\"salary.period\").alias(\"salary_period\"),\n",
+							"        F.col(\"run_id\"),\n",
+							"    )\n",
+							"\n",
+							"    # Walidujemy PRZED deduplikacją i PRZED zapisem.\n",
+							"    invalid_ids = gold_jobs.filter(\n",
+							"        F.col(\"job_id\").isNull()\n",
+							"        | (F.trim(F.col(\"job_id\").cast(\"string\")) == \"\")\n",
+							"    ).limit(1).count()\n",
+							"    duplicate_ids = (\n",
+							"        gold_jobs.groupBy(\"job_id\")\n",
+							"        .count()\n",
+							"        .filter(F.col(\"count\") > 1)\n",
+							"        .limit(1)\n",
+							"        .count()\n",
+							"    )\n",
+							"    row_count = gold_jobs.count()\n",
+							"\n",
+							"    if row_count == 0 or invalid_ids or duplicate_ids:\n",
+							"        raise RuntimeError(\n",
+							"            f\"{snapshot_date}: DATA QUALITY FAILED \"\n",
+							"            f\"(rows={row_count}, invalid_ids={invalid_ids}, \"\n",
+							"            f\"duplicate_ids={duplicate_ids}). Gold nie został zapisany.\"\n",
+							"        )\n",
+							"\n",
+							"    # snapshot_date jest w nazwie partycji; Spark odtworzy ją przy\n",
+							"    # czytaniu tabeli Gold z katalogu głównego.\n",
+							"    (\n",
+							"        gold_jobs.drop(\"snapshot_date\")\n",
+							"        .write\n",
+							"        .mode(\"errorifexists\")\n",
+							"        .parquet(output_path)\n",
+							"    )\n",
+							"    written_dates.append(snapshot_date)\n",
+							"    print(f\"{snapshot_date}: DATA QUALITY PASSED; zapisano {row_count} rekordów.\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# ==========================================\n",
+							"# 4. PODSUMOWANIE PRZETWARZANIA GOLD\n",
+							"# ==========================================\n",
+							"\n",
+							"print(\"====================================\")\n",
+							"print(\"GOLD — FACT_JOB_SNAPSHOTS\")\n",
+							"print(\"Zapisane dni:\", written_dates)\n",
+							"print(\"Pominięte dni:\", skipped_dates)\n",
+							"print(\"Katalog Gold:\", gold_base)\n",
+							"print(\"PRZETWARZANIE ZAKOŃCZONE\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 4
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sparkjobmarket')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 3,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "polandcentral"
+		}
+	]
+}
