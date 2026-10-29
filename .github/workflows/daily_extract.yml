@@ -1,11 +1,10 @@
 
-name: Job Market - Extract to Bronze
+name: Job Market - Daily ETL (Azure)
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "40 5 * * *"
-      timezone: "Europe/Warsaw"
+    - cron: "40 4 * * *"
 
 permissions:
   id-token: write
