@@ -94,6 +94,26 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/03_create_gold_v2_views')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- JOB MARKET INTELLIGENCE | GOLD V2 — published snapshots\n-- Run on Synapse Serverless SQL (Built-in), database: job_market.\n-- Preserves Gold v1 and dbo.vw_job_snapshots.\n-- Gold v2 notebook writes _manifest only AFTER all three datasets succeed.\n-- NOTE: SQL reads manifest Parquet content; it cannot verify Spark's _SUCCESS file.\n--       For strict completion verification, use the validation query below and\n--       confirm _SUCCESS in ADLS before exposing freshly processed dates.\n\n-- 1. Control view: committed snapshot metadata.\nCREATE OR ALTER VIEW dbo.vw_gold_v2_commits AS\nSELECT\n    CAST(m.snapshot_date AS varchar(10)) AS snapshot_date,\n    CAST(m.run_id AS varchar(100)) AS run_id,\n    m.job_count,\n    m.skill_count,\n    m.location_count\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/_manifest/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS m;\nGO\n\n-- 2. Business views: only partitions whose date AND run_id occur in manifest.\nCREATE OR ALTER VIEW dbo.vw_job_snapshots_v2 AS\nSELECT\n    CAST(j.filepath(1) AS date) AS snapshot_date,\n    j.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/fact_job_snapshots/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS j\nWHERE EXISTS (\n    SELECT 1\n    FROM dbo.vw_gold_v2_commits AS m\n    WHERE m.snapshot_date = j.filepath(1)\n      AND m.run_id = j.run_id\n);\nGO\n\nCREATE OR ALTER VIEW dbo.vw_job_skills_v2 AS\nSELECT\n    CAST(s.filepath(1) AS date) AS snapshot_date,\n    s.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/bridge_job_skills/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS s\nWHERE EXISTS (\n    SELECT 1\n    FROM dbo.vw_gold_v2_commits AS m\n    WHERE m.snapshot_date = s.filepath(1)\n      AND m.run_id = s.run_id\n);\nGO\n\nCREATE OR ALTER VIEW dbo.vw_job_locations_v2 AS\nSELECT\n    CAST(l.filepath(1) AS date) AS snapshot_date,\n    l.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/bridge_job_locations/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS l\nWHERE EXISTS (\n    SELECT 1\n    FROM dbo.vw_gold_v2_commits AS m\n    WHERE m.snapshot_date = l.filepath(1)\n      AND m.run_id = l.run_id\n);\nGO\n\n-- 3. Read access for the existing Power BI principal.\nGRANT SELECT ON OBJECT::dbo.vw_job_snapshots_v2 TO [powerbi-reader@adamablergmail.onmicrosoft.com];\nGRANT SELECT ON OBJECT::dbo.vw_job_skills_v2 TO [powerbi-reader@adamablergmail.onmicrosoft.com];\nGRANT SELECT ON OBJECT::dbo.vw_job_locations_v2 TO [powerbi-reader@adamablergmail.onmicrosoft.com];\nGO\n\n-- 4. Validation: each manifest must match the numbers in exposed tables.\nWITH facts AS (\n    SELECT CONVERT(varchar(10), snapshot_date, 23) AS snapshot_date,\n           COUNT_BIG(*) AS actual_jobs\n    FROM dbo.vw_job_snapshots_v2 GROUP BY snapshot_date\n), skills AS (\n    SELECT CONVERT(varchar(10), snapshot_date, 23) AS snapshot_date,\n           COUNT_BIG(*) AS actual_skills\n    FROM dbo.vw_job_skills_v2 GROUP BY snapshot_date\n), locations AS (\n    SELECT CONVERT(varchar(10), snapshot_date, 23) AS snapshot_date,\n           COUNT_BIG(*) AS actual_locations\n    FROM dbo.vw_job_locations_v2 GROUP BY snapshot_date\n)\nSELECT m.snapshot_date, m.run_id,\n       m.job_count AS expected_jobs, f.actual_jobs,\n       m.skill_count AS expected_skills, s.actual_skills,\n       m.location_count AS expected_locations, l.actual_locations,\n       CASE WHEN m.job_count = ISNULL(f.actual_jobs, 0)\n              AND m.skill_count = ISNULL(s.actual_skills, 0)\n              AND m.location_count = ISNULL(l.actual_locations, 0)\n            THEN 'OK' ELSE 'CHECK' END AS count_status\nFROM dbo.vw_gold_v2_commits AS m\nLEFT JOIN facts AS f ON f.snapshot_date = m.snapshot_date\nLEFT JOIN skills AS s ON s.snapshot_date = m.snapshot_date\nLEFT JOIN locations AS l ON l.snapshot_date = m.snapshot_date\nORDER BY m.snapshot_date DESC;\nGO\n\n-- Expected: existing dates 2026-10-26/27/28 return OK.\n-- Note: If count_status = CHECK, do not refresh Power BI.\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "job_market",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/sql_create_vw_job_snapshots')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -1135,31 +1155,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/sparkjobmarket')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"autoPause": {
-					"enabled": true,
-					"delayInMinutes": 5
-				},
-				"autoScale": {
-					"enabled": true,
-					"maxNodeCount": 3,
-					"minNodeCount": 3
-				},
-				"nodeCount": 10,
-				"nodeSize": "Small",
-				"nodeSizeFamily": "MemoryOptimized",
-				"sparkVersion": "3.5",
-				"isComputeIsolationEnabled": false,
-				"sessionLevelPackagesEnabled": false,
-				"annotations": []
-			},
-			"dependsOn": [],
-			"location": "polandcentral"
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/nb_silver_to_gold_v2_jobs')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
@@ -1181,7 +1176,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "9a5e6412-5757-4513-9a6b-a3756e3cfc83"
+						"spark.autotune.trackingId": "65d04001-b8f6-473a-960a-68ff9081160d"
 					}
 				},
 				"metadata": {
@@ -1206,15 +1201,13 @@
 						"sparkVersion": "3.5",
 						"nodeCount": 10,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
+						"memory": 28
 					},
 					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# 1. KONFIGURACJA — Gold v2 (Gold v1 pozostaje bez zmian)\n",
 							"from pyspark.sql import functions as F\n",
@@ -1239,7 +1232,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# 2. WYBÓR ŹRÓDŁA — dla historycznych dni preferujemy run_id z Gold v1\n",
 							"# (żeby porównanie liczby ofert v1/v2 było porównywalne)\n",
@@ -1284,7 +1276,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# 3. TRANSFORMACJA + WALIDACJA + PUBLIKACJA TRZECH TABEL\n",
 							"# Jedynym sygnałem kompletnego dnia jest _SUCCESS w katalogu _manifest.\n",
@@ -1437,7 +1428,6 @@
 					},
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"# 4. PODSUMOWANIE\n",
 							"print(\"====================================\")\n",
@@ -1456,24 +1446,29 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/03_create_gold_v2_views')]",
-			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"name": "[concat(parameters('workspaceName'), '/sparkjobmarket')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"content": {
-					"query": "-- ============================================================\n-- JOB MARKET INTELLIGENCE | GOLD V2\n-- Synapse Serverless SQL (Built-in) | baza: job_market\n-- Nie zmienia Gold v1 ani dbo.vw_job_snapshots.\n-- ============================================================\n\n-- Uruchom w Synapse Studio z kontekstem bazy job_market.\n-- Skrypt korzysta z uprawnien Microsoft Entra / ADLS aktualnego uzytkownika.\n\n-- ============================================================\n-- 1. WIDOKI GOLD V2 (3 tabele biznesowe)\n-- ============================================================\n\nCREATE OR ALTER VIEW dbo.vw_job_snapshots_v2 AS\nSELECT\n    REPLACE(jobs.filepath(1), 'snapshot_date=', '') AS snapshot_date,\n    jobs.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/fact_job_snapshots/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS jobs;\nGO\n\nCREATE OR ALTER VIEW dbo.vw_job_skills_v2 AS\nSELECT\n    REPLACE(skills.filepath(1), 'snapshot_date=', '') AS snapshot_date,\n    skills.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/bridge_job_skills/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS skills;\nGO\n\nCREATE OR ALTER VIEW dbo.vw_job_locations_v2 AS\nSELECT\n    REPLACE(locations.filepath(1), 'snapshot_date=', '') AS snapshot_date,\n    locations.*\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/bridge_job_locations/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS locations;\nGO\n\n-- ============================================================\n-- 2. WIDOK MANIFESTU (kontrola zakonczonych dni)\n--    Nie jest czwarta tabela biznesowa; to metadane ETL.\n-- ============================================================\n\nCREATE OR ALTER VIEW dbo.vw_gold_v2_commits AS\nSELECT\n    manifest.snapshot_date,\n    manifest.run_id,\n    manifest.job_count,\n    manifest.skill_count,\n    manifest.location_count\nFROM OPENROWSET(\n    BULK 'https://stjobmarketdev01.dfs.core.windows.net/gold/jobs/v2/_manifest/snapshot_date=*/*.parquet',\n    FORMAT = 'PARQUET'\n) AS manifest;\nGO\n\n-- ============================================================\n-- 3. RAPORT KONTROLNY: liczby i manifest dla kazdego dnia\n-- ============================================================\n\nWITH fact_counts AS (\n    SELECT snapshot_date, COUNT_BIG(*) AS fact_rows\n    FROM dbo.vw_job_snapshots_v2\n    GROUP BY snapshot_date\n),\nskill_counts AS (\n    SELECT snapshot_date, COUNT_BIG(*) AS skill_rows\n    FROM dbo.vw_job_skills_v2\n    GROUP BY snapshot_date\n),\nlocation_counts AS (\n    SELECT snapshot_date, COUNT_BIG(*) AS location_rows\n    FROM dbo.vw_job_locations_v2\n    GROUP BY snapshot_date\n)\nSELECT\n    m.snapshot_date,\n    m.run_id,\n    m.job_count AS expected_jobs,\n    f.fact_rows,\n    m.skill_count AS expected_skills,\n    s.skill_rows,\n    m.location_count AS expected_locations,\n    l.location_rows,\n    CASE WHEN m.job_count = f.fact_rows\n           AND m.skill_count = s.skill_rows\n           AND m.location_count = l.location_rows\n         THEN 'OK' ELSE 'CHECK' END AS count_status\nFROM dbo.vw_gold_v2_commits AS m\nLEFT JOIN fact_counts AS f ON f.snapshot_date = m.snapshot_date\nLEFT JOIN skill_counts AS s ON s.snapshot_date = m.snapshot_date\nLEFT JOIN location_counts AS l ON l.snapshot_date = m.snapshot_date\nORDER BY m.snapshot_date;\nGO\n\n-- ============================================================\n-- 4. SPRAWDZENIE DUPLIKATOW (wynik pusty = brak duplikatow)\n-- ============================================================\n\nSELECT 'fact' AS dataset, job_snapshot_key, CAST(NULL AS BIGINT) AS item_index, COUNT_BIG(*) AS occurrences\nFROM dbo.vw_job_snapshots_v2\nGROUP BY job_snapshot_key\nHAVING COUNT_BIG(*) > 1\nUNION ALL\nSELECT 'skills', job_snapshot_key, CAST(skill_index AS BIGINT), COUNT_BIG(*)\nFROM dbo.vw_job_skills_v2\nGROUP BY job_snapshot_key, skill_index\nHAVING COUNT_BIG(*) > 1\nUNION ALL\nSELECT 'locations', job_snapshot_key, CAST(location_index AS BIGINT), COUNT_BIG(*)\nFROM dbo.vw_job_locations_v2\nGROUP BY job_snapshot_key, location_index\nHAVING COUNT_BIG(*) > 1;\nGO\n\n-- ============================================================\n-- 5. SKILLS: TOP 20 (wszystkie dni / wystapienia, nie unikalne oferty)\n-- ============================================================\n\nSELECT TOP 20 skill_name, COUNT_BIG(*) AS occurrences\nFROM dbo.vw_job_skills_v2\nGROUP BY skill_name\nORDER BY occurrences DESC;\nGO\n\n-- ============================================================\n-- 6. POWER BI: GRANT SELECT DLA ISTNIEJACEGO UZYTKOWNIKA\n--    Uruchom po utworzeniu widokow, w bazie job_market.\n--    Brak CREATE USER: uzytkownik zostal juz utworzony.\n-- ============================================================\n\nGRANT SELECT ON OBJECT::dbo.vw_job_snapshots_v2\nTO [powerbi-reader@adamablergmail.onmicrosoft.com];\n\nGRANT SELECT ON OBJECT::dbo.vw_job_skills_v2\nTO [powerbi-reader@adamablergmail.onmicrosoft.com];\n\nGRANT SELECT ON OBJECT::dbo.vw_job_locations_v2\nTO [powerbi-reader@adamablergmail.onmicrosoft.com];\nGO\n\n-- UWAGA: powyzsze widoki czytaja wszystkie dostepne partycje Parquet.\n-- Manifest sluzy do weryfikacji, ale same widoki nie filtruja\n-- automatycznie niekompletnych dni. Zanim udostepnisz nowe daty\n-- Power BI, wymagaj poprawnego manifestu dla tych dat.\n",
-					"metadata": {
-						"language": "sql"
-					},
-					"currentConnection": {
-						"databaseName": "job_market",
-						"poolName": "Built-in"
-					},
-					"resultLimit": 5000
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
 				},
-				"type": "SqlQuery"
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 3,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
 			},
-			"dependsOn": []
+			"dependsOn": [],
+			"location": "polandcentral"
 		}
 	]
 }
