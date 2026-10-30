@@ -238,6 +238,16 @@ cultureInfo en-US
 			            },
 			            "Weight": 0.485
 			          }
+			        },
+			        {
+			          "Active Jobs (Latest Snapshot)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
 			        }
 			      ]
 			    },
@@ -359,6 +369,16 @@ cultureInfo en-US
 			              "Agent": "Thesaurus"
 			            },
 			            "Weight": 0.485
+			          }
+			        },
+			        {
+			          "Unique Jobs Observed (Historical)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
 			          }
 			        }
 			      ]
@@ -728,7 +748,7 @@ cultureInfo en-US
 			          }
 			        },
 			        {
-			          "Data As Of": {
+			          "Latest Snapshot Date": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
@@ -3411,6 +3431,16 @@ cultureInfo en-US
 			            },
 			            "Weight": 0.714
 			          }
+			        },
+			        {
+			          "Job Title": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
 			        }
 			      ]
 			    },
@@ -4115,7 +4145,7 @@ cultureInfo en-US
 			          }
 			        },
 			        {
-			          "From": {
+			          "Salary Min": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
@@ -4208,7 +4238,7 @@ cultureInfo en-US
 			          }
 			        },
 			        {
-			          "To": {
+			          "Salary Max": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
@@ -4603,6 +4633,16 @@ cultureInfo en-US
 			            },
 			            "Weight": 0.727
 			          }
+			        },
+			        {
+			          "Contract": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
 			        }
 			      ]
 			    },
@@ -4978,6 +5018,16 @@ cultureInfo en-US
 			              "Agent": "Thesaurus"
 			            },
 			            "Weight": 0.571
+			          }
+			        },
+			        {
+			          "Job Offer URL": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
 			          }
 			        }
 			      ]
@@ -6488,7 +6538,7 @@ cultureInfo en-US
 			          }
 			        },
 			        {
-			          "Jobs Change %": {
+			          "Market Change vs Previous": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",
@@ -6614,7 +6664,70 @@ cultureInfo en-US
 			          }
 			        },
 			        {
-			          "New Jobs": {
+			          "Newly Observed Jobs": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "table_measures.matching_active_jobs": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "_Measures",
+			          "ConceptualProperty": "Matching Active Jobs"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Matching Active Jobs (Latest Snapshot)": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "table_measures.matching_remote_opportunities_": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "_Measures",
+			          "ConceptualProperty": "Matching Remote Opportunities %"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Remote Opportunities %": {
+			            "State": "Suggested",
+			            "Source": {
+			              "Type": "External",
+			              "Agent": "PowerBI.VisualColumnRename"
+			            },
+			            "Weight": 0.9
+			          }
+			        }
+			      ]
+			    },
+			    "table_measures.median_monthly_salary_pln": {
+			      "Definition": {
+			        "Binding": {
+			          "ConceptualEntity": "_Measures",
+			          "ConceptualProperty": "Median Monthly Salary (PLN)"
+			        }
+			      },
+			      "State": "Generated",
+			      "Terms": [
+			        {
+			          "Median Monthly Salary (PLN)": {
 			            "State": "Suggested",
 			            "Source": {
 			              "Type": "External",

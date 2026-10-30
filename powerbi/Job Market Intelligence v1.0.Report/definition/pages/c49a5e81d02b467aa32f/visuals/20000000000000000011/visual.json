@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "20000000000000000011",
   "position": {
-    "x": 40.0,
-    "y": 550.0,
+    "x": 40,
+    "y": 550,
     "z": 1100,
-    "height": 240.0,
-    "width": 905.0,
+    "height": 240,
+    "width": 905,
     "tabOrder": 1100
   },
   "visual": {
@@ -69,6 +69,23 @@
             }
           ]
         }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "_Measures"
+                  }
+                },
+                "Property": "Active Jobs with Skill"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
       }
     },
     "visualContainerObjects": {
@@ -122,6 +139,7 @@
             "Property": "Top 8 Active Skills"
           }
         },
+        "type": "Advanced",
         "filter": {
           "Version": 2,
           "From": [
@@ -155,8 +173,7 @@
               }
             }
           ]
-        },
-        "type": "Advanced"
+        }
       }
     ]
   }

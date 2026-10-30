@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
   "name": "20000000000000000002",
   "position": {
-    "x": 40.0,
-    "y": 115.0,
+    "x": 40,
+    "y": 115,
     "z": 200,
-    "height": 70.0,
-    "width": 445.0,
+    "height": 70,
+    "width": 445,
     "tabOrder": 200
   },
   "visual": {
@@ -27,7 +27,8 @@
                 }
               },
               "queryRef": "vw_job_snapshots_v2.category",
-              "nativeQueryRef": "category"
+              "nativeQueryRef": "category",
+              "active": true
             }
           ]
         }
@@ -121,6 +122,11 @@
               }
             }
           }
+        }
+      ],
+      "general": [
+        {
+          "properties": {}
         }
       ]
     },
