@@ -292,10 +292,19 @@ table _Measures
 
 	measure 'Matching Remote Opportunities %' =
 			
-			DIVIDE(
-			    CALCULATE([Matching Active Jobs], vw_job_snapshots_v2[is_remote] = TRUE()),
-			    [Matching Active Jobs]
-			)
+			VAR TotalInScope =
+			    CALCULATE(
+			        [Matching Active Jobs],
+			        REMOVEFILTERS(vw_job_snapshots_v2[is_remote])
+			    )
+			VAR RemoteInScope =
+			    CALCULATE(
+			        [Matching Active Jobs],
+			        REMOVEFILTERS(vw_job_snapshots_v2[is_remote]),
+			        vw_job_snapshots_v2[is_remote] = TRUE()
+			    )
+			RETURN
+			    DIVIDE(RemoteInScope, TotalInScope)
 		formatString: 0.0%
 		lineageTag: 9035865b-8852-441f-85bb-ab8eba8b6f83
 
@@ -314,8 +323,7 @@ table _Measures
 			        (
 			            vw_job_snapshots_v2[salary_period] = "Month" ||
 			            vw_job_snapshots_v2[salary_period] = "month" ||
-			            vw_job_snapshots_v2[salary_period] = "Miesiąc" ||
-			            ISBLANK(vw_job_snapshots_v2[salary_period])
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
 			        ) &&
 			        (NOT ISBLANK(vw_job_snapshots_v2[salary_from]) || NOT ISBLANK(vw_job_snapshots_v2[salary_to]))
 			    )
@@ -349,6 +357,11 @@ table _Measures
 			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
 			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
 			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        ),
 			        NOT ISBLANK(vw_job_snapshots_v2[salary_from]) || NOT ISBLANK(vw_job_snapshots_v2[salary_to])
 			    )
 		formatString: #,0
@@ -373,7 +386,12 @@ table _Measures
 			    CALCULATE(
 			        MEDIAN(vw_job_snapshots_v2[salary_from]),
 			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
-			        vw_job_snapshots_v2[salary_currency] = "PLN"
+			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        )
 			    )
 		formatString: #,0 "PLN"
 		lineageTag: 77134db7-82e9-40b0-a571-934d9bcc88aa
@@ -391,7 +409,12 @@ table _Measures
 			    CALCULATE(
 			        MEDIAN(vw_job_snapshots_v2[salary_to]),
 			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
-			        vw_job_snapshots_v2[salary_currency] = "PLN"
+			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        )
 			    )
 		formatString: #,0 "PLN"
 		lineageTag: 2cb0afea-7ae0-407b-a4b6-c83b09b34dff
@@ -480,7 +503,10 @@ table _Measures
 			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
 			    )
 			RETURN
-			    IF(SELECTEDVALUE(vw_job_snapshots_v2[snapshot_date]) = LatestDate, 1, 0)
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
 		formatString: 0
 		lineageTag: f1f52881-5f4e-4823-9f31-7bed5f6c49d3
 
