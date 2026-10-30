@@ -1,0 +1,26 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pl-PL
+	valueFilterBehavior: independent
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_QueryOrder = ["vw_job_skills_v2","vw_job_snapshots_v2","vw_job_locations_v2"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table _Measures
+ref table vw_job_skills_v2
+ref table DateTableTemplate_f595d773-0b3a-4865-9899-55821601c781
+ref table LocalDateTable_587b4d06-621a-4fa7-adb1-c98294488720
+ref table vw_job_snapshots_v2
+ref table LocalDateTable_a84be70d-20a2-4bd6-ab2d-e54cf68566ea
+ref table vw_job_locations_v2
+ref table LocalDateTable_d428570e-7ed9-4f16-8df5-0cd5502b6931
+
+ref cultureInfo en-US
+

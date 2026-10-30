@@ -1,0 +1,111 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "20000000000000000011",
+  "position": {
+    "x": 40.0,
+    "y": 705.0,
+    "z": 1100,
+    "height": 385.0,
+    "width": 905.0,
+    "tabOrder": 1100
+  },
+  "visual": {
+    "visualType": "barChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_skills_v2"
+                    }
+                  },
+                  "Property": "skill_name"
+                }
+              },
+              "queryRef": "vw_job_skills_v2.skill_name",
+              "nativeQueryRef": "skill_name",
+              "active": true
+            }
+          ]
+        },
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_skills_v2"
+                    }
+                  },
+                  "Property": "skill_level"
+                }
+              },
+              "queryRef": "vw_job_skills_v2.skill_level",
+              "nativeQueryRef": "skill_level",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Active Jobs with Skill"
+                }
+              },
+              "queryRef": "_Measures.Active Jobs with Skill",
+              "nativeQueryRef": "Active Jobs with Skill"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Skill Proficiency Distribution'"
+                }
+              }
+            },
+            "heading": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Heading3'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Required expertise level (Junior / Mid / Senior) for active technologies'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

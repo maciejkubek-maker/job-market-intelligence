@@ -41,3 +41,6 @@ data/**
 *.log
 .DS_Store
 Thumbs.db
+
+# Power BI Desktop local cache & user settings
+**/.pbi/

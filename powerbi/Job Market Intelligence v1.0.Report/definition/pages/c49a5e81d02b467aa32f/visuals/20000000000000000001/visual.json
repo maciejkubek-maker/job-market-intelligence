@@ -1,0 +1,62 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "20000000000000000001",
+  "position": {
+    "x": 40.0,
+    "y": 20.0,
+    "z": 100,
+    "height": 75.0,
+    "width": 1840.0,
+    "tabOrder": 100
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "JOB MARKET INTELLIGENCE / CAREER INTELLIGENCE",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontWeight": "bold",
+                      "color": "#64C9FA"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Explore Your Next Career Move",
+                    "textStyle": {
+                      "fontSize": "22pt",
+                      "fontWeight": "bold",
+                      "color": "#F8FAFC"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Interactive career intelligence: filter by role to discover active skill requirements, salary benchmarks, and matching job postings",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontWeight": "normal",
+                      "color": "#9CAFC6"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

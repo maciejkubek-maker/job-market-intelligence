@@ -1,0 +1,82 @@
+table vw_job_skills_v2
+	lineageTag: ab5d0614-097b-41cd-8781-33d29d5ef908
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: ca53ac8b-c6cb-4c57-b96b-158b9fac94bf
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+		variation Variation
+			isDefault
+			relationship: fadfe8bd-7772-4211-9ad2-466f597cf437
+			defaultHierarchy: LocalDateTable_587b4d06-621a-4fa7-adb1-c98294488720.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_snapshot_key
+		dataType: string
+		lineageTag: 3d715a12-7576-4d9c-9e13-f772b0fcc57e
+		summarizeBy: none
+		sourceColumn: job_snapshot_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_id
+		dataType: string
+		lineageTag: 829a7d07-fa70-4814-9fa2-c4fd8727d0f2
+		summarizeBy: none
+		sourceColumn: job_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column run_id
+		dataType: string
+		lineageTag: 077369f5-b5ae-4acd-a125-f41c1ff74e0f
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column skill_index
+		dataType: int64
+		formatString: 0
+		lineageTag: 95925e0f-bf81-4dbe-9eb7-fdc64c61b5b8
+		summarizeBy: sum
+		sourceColumn: skill_index
+
+		annotation SummarizationSetBy = Automatic
+
+	column skill_name
+		dataType: string
+		lineageTag: cce8051f-e13c-4727-b0a1-b8a9edf860f3
+		summarizeBy: none
+		sourceColumn: skill_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column skill_level
+		dataType: string
+		lineageTag: bdb5d42e-a3bc-4803-ac7d-984a33fa26ae
+		summarizeBy: none
+		sourceColumn: skill_level
+
+		annotation SummarizationSetBy = Automatic
+
+	partition vw_job_skills_v2 = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(
+				        "syn-job-market-dev-ondemand.sql.azuresynapse.net",
+				        "job_market",
+				        [
+				            Query = "SELECT * FROM dbo.vw_job_skills_v2"
+				        ]
+				    )
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
+

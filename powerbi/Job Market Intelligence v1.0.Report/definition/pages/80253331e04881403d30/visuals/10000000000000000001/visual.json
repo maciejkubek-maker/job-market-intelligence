@@ -1,0 +1,62 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "10000000000000000001",
+  "position": {
+    "x": 40.0,
+    "y": 20.0,
+    "z": 100,
+    "height": 80.0,
+    "width": 1500.0,
+    "tabOrder": 100
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "JOB MARKET INTELLIGENCE / POLAND",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontWeight": "bold",
+                      "color": "#64C9FA"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Polish Tech Job Market",
+                    "textStyle": {
+                      "fontSize": "22pt",
+                      "fontWeight": "bold",
+                      "color": "#F8FAFC"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Hiring demand, skills, and market dynamics across Poland  |  Source: SOLID.Jobs",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontWeight": "normal",
+                      "color": "#9CAFC6"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
