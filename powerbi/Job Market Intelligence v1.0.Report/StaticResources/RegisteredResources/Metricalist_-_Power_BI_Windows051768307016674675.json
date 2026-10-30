@@ -202,6 +202,134 @@
           }
         ]
       }
+    },
+    "pageNavigator": {
+      "*": {
+        "background": [
+          {
+            "show": false
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": false
+          }
+        ],
+        "text": [
+          {
+            "$id": "default",
+            "fontSize": 11,
+            "fontColor": {
+              "solid": {
+                "color": "#9CAFC6"
+              }
+            }
+          },
+          {
+            "$id": "hover",
+            "fontColor": {
+              "solid": {
+                "color": "#F8FAFC"
+              }
+            }
+          },
+          {
+            "$id": "selected",
+            "fontSize": 11,
+            "fontColor": {
+              "solid": {
+                "color": "#111722"
+              }
+            }
+          }
+        ],
+        "shape": [
+          {
+            "$id": "default",
+            "tileShape": "rectangleRounded",
+            "rectangleRoundedCurve": 6
+          }
+        ],
+        "outline": [
+          {
+            "show": true,
+            "lineColor": {
+              "solid": {
+                "color": "#344359"
+              }
+            },
+            "weight": 1
+          },
+          {
+            "$id": "selected",
+            "lineColor": {
+              "solid": {
+                "color": "#64C9FA"
+              }
+            },
+            "weight": 1
+          }
+        ],
+        "fill": [
+          {
+            "show": true
+          },
+          {
+            "$id": "default",
+            "fillColor": {
+              "solid": {
+                "color": "#1D2736"
+              }
+            },
+            "transparency": 0
+          },
+          {
+            "$id": "hover",
+            "fillColor": {
+              "solid": {
+                "color": "#222D40"
+              }
+            },
+            "transparency": 0
+          },
+          {
+            "$id": "selected",
+            "fillColor": {
+              "solid": {
+                "color": "#64C9FA"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "accentBar": [
+          {
+            "show": false
+          },
+          {
+            "$id": "selected",
+            "show": true,
+            "position": "Bottom",
+            "weight": 3,
+            "color": {
+              "solid": {
+                "color": "#F8FAFC"
+              }
+            }
+          }
+        ],
+        "layout": [
+          {
+            "orientation": 2,
+            "cellPadding": 6
+          }
+        ]
+      }
     }
   },
   "dataColors": [
