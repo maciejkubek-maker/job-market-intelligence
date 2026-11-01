@@ -1,0 +1,528 @@
+table _Measures
+	lineageTag: c0c09078-0f8b-4940-8653-357c67254dfa
+
+	measure 'Active Jobs' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+		formatString: 0
+		lineageTag: e4100b3b-7399-4d68-8db7-4f2dfa5edfac
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Unique Jobs' =
+
+			DISTINCTCOUNT(vw_job_snapshots_v2[job_id])
+		formatString: 0
+		lineageTag: 008aa9ce-e938-4388-b34f-b07be24aad48
+
+	measure 'Unique Skills' =
+
+			DISTINCTCOUNT(vw_job_skills_v2[skill_name])
+		formatString: 0
+		lineageTag: c1e70db5-ae15-4383-a019-ade1dc28204c
+
+	measure 'Top 5 Skills' =
+
+			VAR SkillRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_skills_v2[skill_name]),
+			        CALCULATE(
+			            DISTINCTCOUNT(vw_job_skills_v2[job_id]),
+			            REMOVEFILTERS(vw_job_skills_v2[snapshot_date])
+			        ),
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(SkillRank <= 5, 1, 0)
+		formatString: 0
+		lineageTag: c48a6cae-5b00-4c17-8aa2-bbb2a829d985
+
+	measure 'Report Data On' =
+
+
+			FORMAT(
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS()
+			    ),
+			    "dd MMM yyyy",
+			    "en-US"
+			)
+		lineageTag: 3bfcead1-345a-4d41-8479-02e3f842be7f
+
+	measure Last_day_unique_jobs =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2)
+			    )
+			VAR PreviousDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] < LatestDate
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] = PreviousDate
+			    )
+		formatString: 0
+		lineageTag: e31a038a-c444-4549-94a9-8e2fcf9648df
+
+	measure 'Jobs Change % vs Previous Snapshot' =
+
+			DIVIDE(
+			    [Active Jobs] - [Last_day_unique_jobs],
+			    [Last_day_unique_jobs]
+			)
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: 8c3250d5-ecbf-478f-bedc-0b8b1383c1b6
+
+	measure 'New Jobs vs Previous Snapshot' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2)
+			    )
+			VAR PreviousDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] < LatestDate
+			    )
+			VAR CurrentJobs =
+			    CALCULATETABLE(
+			        VALUES(vw_job_snapshots_v2[job_id]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+			VAR PreviousJobs =
+			    CALCULATETABLE(
+			        VALUES(vw_job_snapshots_v2[job_id]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] = PreviousDate
+			    )
+			RETURN
+			    COUNTROWS(EXCEPT(CurrentJobs, PreviousJobs))
+		formatString: 0
+		lineageTag: a1ee2b44-c202-4cd4-953e-904f54b093b0
+
+	measure 'Job Postings with Skill' =
+
+			DISTINCTCOUNT(vw_job_skills_v2[job_id])
+		formatString: 0
+		lineageTag: ab31b3fc-ff7b-4428-8b16-d545cff23ab8
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Active Jobs with Skill' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_skills_v2[job_id]),
+			        vw_job_skills_v2[snapshot_date] = LatestDate
+			    )
+		formatString: 0
+		lineageTag: ae75d9f8-04bd-416b-97cb-bbe99debc8b5
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Daily Active Jobs' =
+
+			DISTINCTCOUNT(vw_job_snapshots_v2[job_id])
+		formatString: #,0
+		lineageTag: 76ad71d6-5f9c-41c2-86a9-aea5a29b4431
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Top 8 Skills' =
+
+			VAR SkillRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_skills_v2[skill_name]),
+			        CALCULATE(
+			            DISTINCTCOUNT(vw_job_skills_v2[job_id]),
+			            REMOVEFILTERS(vw_job_skills_v2[snapshot_date])
+			        ),
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(SkillRank <= 8 && DISTINCTCOUNT(vw_job_skills_v2[job_id]) > 0, 1, 0)
+		formatString: 0
+		lineageTag: 54e41126-91e9-4e96-b5fd-ad76698b0acc
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Top 6 Categories' =
+
+			VAR CatRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_snapshots_v2[category]),
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(CatRank <= 6 && DISTINCTCOUNT(vw_job_snapshots_v2[job_id]) > 0, 1, 0)
+		formatString: 0
+		lineageTag: 4b6f4d17-bd6f-49ac-bcac-79cc28a3a8ce
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Active Remote Jobs' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
+			        vw_job_snapshots_v2[is_remote] = TRUE()
+			    )
+		formatString: #,0
+		lineageTag: 494e44ee-e179-45ff-b9b8-b5af4c33fcc5
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Active Remote %' =
+
+			DIVIDE([Active Remote Jobs], [Active Jobs])
+		formatString: 0.0%
+		lineageTag: 6037bbd4-4209-4177-b67a-c18cbbc02839
+
+	measure 'Active Jobs By Remote Status' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+		formatString: #,0
+		lineageTag: 0463d79a-f285-4608-a6cb-25cb62c66d56
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Disappeared Jobs vs Previous Snapshot' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2)
+			    )
+			VAR PreviousDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] < LatestDate
+			    )
+			VAR CurrentJobs =
+			    CALCULATETABLE(
+			        VALUES(vw_job_snapshots_v2[job_id]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+			VAR PreviousJobs =
+			    CALCULATETABLE(
+			        VALUES(vw_job_snapshots_v2[job_id]),
+			        REMOVEFILTERS(vw_job_snapshots_v2),
+			        vw_job_snapshots_v2[snapshot_date] = PreviousDate
+			    )
+			RETURN
+			    COUNTROWS(EXCEPT(PreviousJobs, CurrentJobs))
+		formatString: 0
+		lineageTag: ba69e9ec-0e86-4169-b82d-b134c59fb7c6
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Net Job Change vs Previous Snapshot' =
+
+			[New Jobs vs Previous Snapshot] - [Disappeared Jobs vs Previous Snapshot]
+		formatString: +#,0;-#,0;0
+		lineageTag: d820929a-3cb4-4b33-b462-ca2baef5a2ea
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Matching Active Jobs' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+		formatString: #,0
+		lineageTag: 81cbd703-b1ea-422f-914f-0a5964a6bfdd
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Matching Remote Opportunities %' =
+
+			VAR TotalInScope =
+			    CALCULATE(
+			        [Matching Active Jobs],
+			        REMOVEFILTERS(vw_job_snapshots_v2[is_remote])
+			    )
+			VAR RemoteInScope =
+			    CALCULATE(
+			        [Matching Active Jobs],
+			        REMOVEFILTERS(vw_job_snapshots_v2[is_remote]),
+			        vw_job_snapshots_v2[is_remote] = TRUE()
+			    )
+			RETURN
+			    DIVIDE(RemoteInScope, TotalInScope)
+		formatString: 0.0%
+		lineageTag: 9035865b-8852-441f-85bb-ab8eba8b6f83
+
+	measure 'Median Monthly Salary (PLN)' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			VAR ValidSalaries =
+			    FILTER(
+			        vw_job_snapshots_v2,
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate &&
+			        vw_job_snapshots_v2[salary_currency] = "PLN" &&
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        ) &&
+			        (NOT ISBLANK(vw_job_snapshots_v2[salary_from]) || NOT ISBLANK(vw_job_snapshots_v2[salary_to]))
+			    )
+			RETURN
+			    MEDIANX(
+			        ValidSalaries,
+			        VAR SFrom = vw_job_snapshots_v2[salary_from]
+			        VAR STo = vw_job_snapshots_v2[salary_to]
+			        RETURN
+			            SWITCH(
+			                TRUE(),
+			                NOT ISBLANK(SFrom) && NOT ISBLANK(STo), (SFrom + STo) / 2,
+			                NOT ISBLANK(SFrom), SFrom,
+			                STo
+			            )
+			    )
+		formatString: #,0 "PLN"
+		lineageTag: 704acaeb-8735-4ac7-9b6e-a44ab114e8e4
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Salary Disclosed Jobs Count' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
+			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        ),
+			        NOT ISBLANK(vw_job_snapshots_v2[salary_from]) || NOT ISBLANK(vw_job_snapshots_v2[salary_to])
+			    )
+		formatString: #,0
+		lineageTag: 6cd17c8e-3a35-4a10-8aa5-adebf03bf127
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Salary Disclosure %' =
+
+			DIVIDE([Salary Disclosed Jobs Count], [Matching Active Jobs])
+		formatString: 0.0%
+		lineageTag: e70a4bf5-6da3-4724-a0f1-146d9b978eab
+
+	measure 'Median Salary From' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        MEDIAN(vw_job_snapshots_v2[salary_from]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
+			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        )
+			    )
+		formatString: #,0 "PLN"
+		lineageTag: 77134db7-82e9-40b0-a571-934d9bcc88aa
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Median Salary To' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        MEDIAN(vw_job_snapshots_v2[salary_to]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate,
+			        vw_job_snapshots_v2[salary_currency] = "PLN",
+			        (
+			            vw_job_snapshots_v2[salary_period] = "Month" ||
+			            vw_job_snapshots_v2[salary_period] = "month" ||
+			            vw_job_snapshots_v2[salary_period] = "Miesiąc"
+			        )
+			    )
+		formatString: #,0 "PLN"
+		lineageTag: 2cb0afea-7ae0-407b-a4b6-c83b09b34dff
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Top 10 Active Skills' =
+
+			VAR SkillRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_skills_v2[skill_name]),
+			        [Active Jobs with Skill],
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(SkillRank <= 10 && [Active Jobs with Skill] > 0, 1, 0)
+		formatString: 0
+		lineageTag: 3105af96-faaa-4e7f-b9f6-580e0f982e7e
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Top 8 Active Skills' =
+
+			VAR SkillRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_skills_v2[skill_name]),
+			        [Active Jobs with Skill],
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(SkillRank <= 8 && [Active Jobs with Skill] > 0, 1, 0)
+		formatString: 0
+		lineageTag: 0188de2d-94a1-4d52-b89f-e27e2b7bc495
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Skill Share of Active Jobs %' =
+
+			DIVIDE([Active Jobs with Skill], [Matching Active Jobs])
+		formatString: 0.0%
+		lineageTag: 4f31fb89-92b6-4cd2-9383-6437d0aa545c
+
+	measure 'Active Jobs by Location' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_locations_v2[job_id]),
+			        vw_job_locations_v2[snapshot_date] = LatestDate
+			    )
+		formatString: #,0
+		lineageTag: 1df36982-ca1f-4ff5-90a2-d2b83c87cc71
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Top 8 Locations' =
+
+			VAR LocRank =
+			    RANKX(
+			        ALLSELECTED(vw_job_locations_v2[location_name]),
+			        [Active Jobs by Location],
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			RETURN
+			    IF(LocRank <= 8 && [Active Jobs by Location] > 0, 1, 0)
+		formatString: 0
+		lineageTag: cd796e72-127b-4ca1-b06e-3ad099dfdc7e
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	measure 'Is Latest Snapshot' =
+
+			VAR LatestDate =
+			    CALCULATE(
+			        MAX(vw_job_snapshots_v2[snapshot_date]),
+			        REMOVEFILTERS(vw_job_snapshots_v2[snapshot_date])
+			    )
+			RETURN
+			    CALCULATE(
+			        DISTINCTCOUNT(vw_job_snapshots_v2[job_id]),
+			        vw_job_snapshots_v2[snapshot_date] = LatestDate
+			    )
+		formatString: 0
+		lineageTag: f1f52881-5f4e-4823-9f31-7bed5f6c49d3
+
+		annotation PBI_FormatHint = {"isDecimal":true}
+
+	column Placeholder
+		isHidden
+		lineageTag: d6d8a8be-7ead-48db-ba07-ceaf8c0a9698
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Placeholder]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition _Measures = calculated
+		mode: import
+		source = DATATABLE("Placeholder", STRING, {{"temp"}})
+
+	annotation PBI_Id = 4205b41088f642fe8f9181044741d963

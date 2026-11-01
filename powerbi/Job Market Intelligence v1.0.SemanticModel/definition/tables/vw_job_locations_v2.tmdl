@@ -1,0 +1,73 @@
+table vw_job_locations_v2
+	lineageTag: ce464757-a162-40a1-9520-af9795cffe4d
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: eed53734-6c15-43d1-b66c-ccec0edf9e0d
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+		variation Variation
+			isDefault
+			relationship: 09afc41f-6666-457b-96a5-5495e36d93b0
+			defaultHierarchy: LocalDateTable_d428570e-7ed9-4f16-8df5-0cd5502b6931.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_snapshot_key
+		dataType: string
+		lineageTag: f3d0bf61-9e00-4694-99db-8a31f8564768
+		summarizeBy: none
+		sourceColumn: job_snapshot_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_id
+		dataType: string
+		lineageTag: 7f0932c5-9945-42d2-94ee-174b3b73d74a
+		summarizeBy: none
+		sourceColumn: job_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column run_id
+		dataType: string
+		lineageTag: b1228e1b-c003-4e04-8162-2173344bb85d
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_index
+		dataType: int64
+		formatString: 0
+		lineageTag: 4d2df950-d517-4850-8aad-a13d9b34db8d
+		summarizeBy: sum
+		sourceColumn: location_index
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_name
+		dataType: string
+		lineageTag: 3be76990-c077-4fa8-8103-de23cd08befa
+		summarizeBy: none
+		sourceColumn: location_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition vw_job_locations_v2 = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(
+				        "syn-job-market-dev-ondemand.sql.azuresynapse.net",
+				        "job_market",
+				        [
+				            Query = "SELECT * FROM dbo.vw_job_locations_v2"
+				        ]
+				    )
+				in
+				    Source
+
+	annotation PBI_ResultType = Table

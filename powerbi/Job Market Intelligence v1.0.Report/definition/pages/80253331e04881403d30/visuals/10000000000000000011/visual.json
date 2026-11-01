@@ -1,0 +1,101 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "10000000000000000011",
+  "position": {
+    "x": 1260,
+    "y": 625,
+    "z": 1100,
+    "height": 395,
+    "width": 620,
+    "tabOrder": 1100
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "New Jobs vs Previous Snapshot"
+                }
+              },
+              "queryRef": "_Measures.New Jobs vs Previous Snapshot",
+              "nativeQueryRef": "New Jobs vs Previous Snapshot"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Disappeared Jobs vs Previous Snapshot"
+                }
+              },
+              "queryRef": "_Measures.Disappeared Jobs vs Previous Snapshot",
+              "nativeQueryRef": "Disappeared Jobs vs Previous Snapshot"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "_Measures"
+                    }
+                  },
+                  "Property": "Net Job Change vs Previous Snapshot"
+                }
+              },
+              "queryRef": "_Measures.Net Job Change vs Previous Snapshot",
+              "nativeQueryRef": "Net Job Change vs Previous Snapshot"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Market Movement'"
+                }
+              }
+            },
+            "heading": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Heading3'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'New observations, disappeared postings, and net change (Latest vs Previous)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

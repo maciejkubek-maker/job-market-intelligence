@@ -1,0 +1,263 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "20000000000000000013",
+  "position": {
+    "x": 40,
+    "y": 805,
+    "z": 1300,
+    "height": 205,
+    "width": 1840,
+    "tabOrder": 1300
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "title"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.title",
+              "nativeQueryRef": "Title",
+              "displayName": "Job Title"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "company"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.company",
+              "nativeQueryRef": "Company",
+              "displayName": "Company"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_locations_v2"
+                    }
+                  },
+                  "Property": "location_name"
+                }
+              },
+              "queryRef": "vw_job_locations_v2.location_name",
+              "nativeQueryRef": "Location",
+              "displayName": "Location"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "employment_type"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.employment_type",
+              "nativeQueryRef": "Type",
+              "displayName": "Contract"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "salary_from"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.salary_from",
+              "nativeQueryRef": "From",
+              "displayName": "Salary Min"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "salary_to"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.salary_to",
+              "nativeQueryRef": "To",
+              "displayName": "Salary Max"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "salary_currency"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.salary_currency",
+              "nativeQueryRef": "Currency",
+              "displayName": "Currency"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "salary_period"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.salary_period",
+              "nativeQueryRef": "Period",
+              "displayName": "Period"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "vw_job_snapshots_v2"
+                    }
+                  },
+                  "Property": "url"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.url",
+              "nativeQueryRef": "URL",
+              "displayName": "Job Offer URL"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "vw_job_snapshots_v2"
+                  }
+                },
+                "Property": "salary_to"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Explore Matching Job Offers'"
+                }
+              }
+            },
+            "heading": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Heading3'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Curated active vacancies matching candidate criteria (Latest Snapshot)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "Filter_IsLatestSnapshot",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "_Measures"
+              }
+            },
+            "Property": "Is Latest Snapshot"
+          }
+        },
+        "type": "Advanced",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "m",
+              "Entity": "_Measures",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "Comparison": {
+                  "ComparisonKind": 0,
+                  "Left": {
+                    "Measure": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Source": "m"
+                        }
+                      },
+                      "Property": "Is Latest Snapshot"
+                    }
+                  },
+                  "Right": {
+                    "Literal": {
+                      "Value": "1L"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

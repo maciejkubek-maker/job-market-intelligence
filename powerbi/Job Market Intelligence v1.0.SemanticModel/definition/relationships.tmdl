@@ -1,0 +1,22 @@
+relationship fadfe8bd-7772-4211-9ad2-466f597cf437
+	joinOnDateBehavior: datePartOnly
+	fromColumn: vw_job_skills_v2.snapshot_date
+	toColumn: LocalDateTable_587b4d06-621a-4fa7-adb1-c98294488720.Date
+
+relationship fcb34e7a-65bb-4d77-a483-7596b35f99e9
+	joinOnDateBehavior: datePartOnly
+	fromColumn: vw_job_snapshots_v2.snapshot_date
+	toColumn: LocalDateTable_a84be70d-20a2-4bd6-ab2d-e54cf68566ea.Date
+
+relationship 09afc41f-6666-457b-96a5-5495e36d93b0
+	joinOnDateBehavior: datePartOnly
+	fromColumn: vw_job_locations_v2.snapshot_date
+	toColumn: LocalDateTable_d428570e-7ed9-4f16-8df5-0cd5502b6931.Date
+
+relationship AutoDetected_d15e08bb-3b9f-4a5a-9d4b-7a8ad8d70e8e
+	fromColumn: vw_job_skills_v2.job_snapshot_key
+	toColumn: vw_job_snapshots_v2.job_snapshot_key
+
+relationship 595ba28f-b9f7-be5b-90c8-e7a6f8878604
+	fromColumn: vw_job_snapshots_v2.job_snapshot_key
+	toColumn: vw_job_locations_v2.job_snapshot_key

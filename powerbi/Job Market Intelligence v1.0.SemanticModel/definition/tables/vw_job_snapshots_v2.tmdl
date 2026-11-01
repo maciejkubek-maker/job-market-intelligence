@@ -1,0 +1,238 @@
+table vw_job_snapshots_v2
+	lineageTag: 977f8944-f80e-4dd5-b5dc-ddff63bc7eed
+
+	column snapshot_date
+		dataType: dateTime
+		formatString: General Date
+		lineageTag: d2c03998-872e-4952-bc5e-0bb90a5d2938
+		summarizeBy: none
+		sourceColumn: snapshot_date
+
+		variation Variation
+			isDefault
+			relationship: fcb34e7a-65bb-4d77-a483-7596b35f99e9
+			defaultHierarchy: LocalDateTable_a84be70d-20a2-4bd6-ab2d-e54cf68566ea.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_snapshot_key
+		dataType: string
+		lineageTag: 59cb1406-7853-4f93-b8bd-dcfbe4de9e3c
+		summarizeBy: none
+		sourceColumn: job_snapshot_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		lineageTag: 4a89a45d-7d64-4d25-a5af-81cec08edbcf
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	column job_id
+		dataType: string
+		lineageTag: 77e378d9-7880-42df-aed5-42f9d4db3f28
+		summarizeBy: none
+		sourceColumn: job_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column run_id
+		dataType: string
+		lineageTag: dc789792-cb3b-4087-aa1b-cd6fd31d70f2
+		summarizeBy: none
+		sourceColumn: run_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column title
+		dataType: string
+		lineageTag: 19edd177-acc3-4df6-93d1-6346389e48f2
+		summarizeBy: none
+		sourceColumn: title
+
+		annotation SummarizationSetBy = Automatic
+
+	column division
+		dataType: string
+		lineageTag: 6debb43f-f1ec-4919-833c-0eecb7384258
+		summarizeBy: none
+		sourceColumn: division
+
+		annotation SummarizationSetBy = Automatic
+
+	column category
+		dataType: string
+		lineageTag: 6e36c4d4-a4e0-4746-a884-0c477c6f0332
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	column sub_category
+		dataType: string
+		lineageTag: b798462a-437b-444f-9e50-ba1cacef7ffe
+		summarizeBy: none
+		sourceColumn: sub_category
+
+		annotation SummarizationSetBy = Automatic
+
+	column company
+		dataType: string
+		lineageTag: 6bd6dd29-f7cf-4e0d-9087-9ac61c968f2f
+		summarizeBy: none
+		sourceColumn: company
+
+		annotation SummarizationSetBy = Automatic
+
+	column company_logo_url
+		dataType: string
+		lineageTag: c95e7578-659d-4f00-baf6-fb14cac037cb
+		summarizeBy: none
+		sourceColumn: company_logo_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column experience_level
+		dataType: string
+		lineageTag: dfd8663c-3f3a-433b-a218-58d2af6e296c
+		summarizeBy: none
+		sourceColumn: experience_level
+
+		annotation SummarizationSetBy = Automatic
+
+	column salary_from
+		dataType: double
+		lineageTag: 8d567739-4b7f-42e1-b571-bcc0f1b10038
+		summarizeBy: sum
+		sourceColumn: salary_from
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column salary_to
+		dataType: double
+		lineageTag: c3564ec0-ab49-4b0d-849f-9db936e23be5
+		summarizeBy: sum
+		sourceColumn: salary_to
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column salary_currency
+		dataType: string
+		lineageTag: 4747da97-f691-4dfa-bec0-ff49a5e7881b
+		summarizeBy: none
+		sourceColumn: salary_currency
+
+		annotation SummarizationSetBy = Automatic
+
+	column salary_period
+		dataType: string
+		lineageTag: 7817b347-cf5d-4bfb-b611-da7c16e2aab0
+		summarizeBy: none
+		sourceColumn: salary_period
+
+		annotation SummarizationSetBy = Automatic
+
+	column employment_type
+		dataType: string
+		lineageTag: 4eb37c46-c647-4b0f-bbcc-deabf269be8c
+		summarizeBy: none
+		sourceColumn: employment_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_remote
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: c1cda228-a911-4794-8c71-f8e48e63e922
+		summarizeBy: none
+		sourceColumn: is_remote
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_hybrid
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		lineageTag: 738b521e-3788-42e5-9263-426814db52ab
+		summarizeBy: none
+		sourceColumn: is_hybrid
+
+		annotation SummarizationSetBy = Automatic
+
+	column contract_time
+		dataType: string
+		lineageTag: 42cc1196-b7f3-42cb-af91-7caeb2601b86
+		summarizeBy: none
+		sourceColumn: contract_time
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_from
+		dataType: string
+		lineageTag: fde012b8-92d5-4ec8-975b-b19a1ae0eedc
+		summarizeBy: none
+		sourceColumn: valid_from
+
+		annotation SummarizationSetBy = Automatic
+
+	column valid_to
+		dataType: string
+		lineageTag: 3ee8d584-9701-41cb-8a73-e2290955ae2b
+		summarizeBy: none
+		sourceColumn: valid_to
+
+		annotation SummarizationSetBy = Automatic
+
+	column updated_at
+		dataType: string
+		lineageTag: 613b1bf1-0ece-4798-b16e-6dcf0604d780
+		summarizeBy: none
+		sourceColumn: updated_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column url
+		dataType: string
+		lineageTag: d5385df9-ab37-410a-95f8-9fa11f03fa33
+		summarizeBy: none
+		sourceColumn: url
+
+		annotation SummarizationSetBy = Automatic
+
+	column languages_json
+		dataType: string
+		lineageTag: 5dde111f-6538-4759-a9aa-2a88f5d528d7
+		summarizeBy: none
+		sourceColumn: languages_json
+
+		annotation SummarizationSetBy = Automatic
+
+	column benefits_json
+		dataType: string
+		lineageTag: 40e5bfbb-e7fb-415f-aadd-c6d05d3bd73e
+		summarizeBy: none
+		sourceColumn: benefits_json
+
+		annotation SummarizationSetBy = Automatic
+
+	partition vw_job_snapshots_v2 = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Database(
+				        "syn-job-market-dev-ondemand.sql.azuresynapse.net",
+				        "job_market",
+				        [
+				            Query = "SELECT * FROM dbo.vw_job_snapshots_v2"
+				        ]
+				    )
+				in
+				    Source
+
+	annotation PBI_ResultType = Table
