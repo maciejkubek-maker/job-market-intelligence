@@ -40,3 +40,7 @@ Projekt monitoruje oferty polskiego rynku pracy (począwszy od publicznego API S
 - **Negatywne / Kompromisy:**
   - Wymaga zarządzania retencją surowych plików JSON w Bronze (polityki ADLS Lifecycle Management).
   - Narzut czasowy związany z uruchamianiem klastra Spark dla małych wolumenów danych (uzasadniony przygotowaniem pod skalowalność i demonstrację technologii chmurowych).
+
+## Późniejsza ewolucja: Gold v2
+
+Po przyjęciu tej decyzji wdrożono warstwę **Gold v2** w `gold/jobs/v2/`. Rozszerza ona pierwotny płaski model Gold v1 o `fact_job_snapshots`, tabele pomostowe `bridge_job_skills` i `bridge_job_locations` oraz manifest zatwierdzenia `_manifest`. Dane są udostępniane przez widoki Synapse Serverless SQL `dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, `dbo.vw_job_locations_v2` i `dbo.vw_gold_v2_commits`, z których korzysta aktualny model Power BI. Gold v1 i `dbo.vw_job_snapshots` pozostają warstwą legacy do celów archiwalnych, rollbacku i porównań historycznych. Ta informacja uzupełnia historię ADR i nie zmienia pierwotnego kontekstu decyzji.

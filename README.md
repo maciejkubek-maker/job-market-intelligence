@@ -60,8 +60,8 @@ The architecture separates storage, distributed processing, and analytical prese
           │
           ▼ Analytical Presentation Layer
 [ Power BI ]
-          ├── Power BI report v1 (active, using legacy view dbo.vw_job_snapshots)
-          └── Power BI report v2 (future phase — migration to the Gold v2 star schema)
+          ├── Market Overview dashboard (Gold v2)
+          └── Career Explorer dashboard (Gold v2)
 ```
 
 ### System Components
@@ -78,7 +78,7 @@ The architecture separates storage, distributed processing, and analytical prese
 - **Analytical layer:** Synapse Serverless SQL Pool (database `job_market`):
   - Active Gold v2 views: `dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, `dbo.vw_job_locations_v2`, `dbo.vw_gold_v2_commits`,
   - Legacy view: `dbo.vw_job_snapshots` (Gold v1).
-- **Reporting and BI:** The existing Power BI v1 report uses Gold v1; migrating the report to the Gold v2 star schema is planned as a future phase.
+- **Reporting and BI:** The current Power BI project (`.pbip` with a TMDL semantic model) imports `dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, and `dbo.vw_job_locations_v2`. Its active dashboard pages are **Market Overview** and **Career Explorer**.
 
 ---
 
@@ -89,7 +89,7 @@ The architecture separates storage, distributed processing, and analytical prese
 | **Bronze** | Raw JSON + `manifest.json` | `bronze/source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=<timestamp_utc>/` | Stores source API responses 1:1, partitioned by page. Each attempt receives a unique timestamp-based `run_id`, eliminating the risk of overwriting historical data. The `completed` status is assigned only after the full page set and job-posting uniqueness have been verified. |
 | **Silver** | Apache Parquet (Snappy) | `silver/jobs/source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=<run_id>/` | Applies data typing, deduplicates postings within a snapshot, normalizes salary ranges into `salary_from`, `salary_to`, and `currency`, flattens technology arrays, and adds data-quality flags. A successful write ends with an `_SUCCESS` marker. |
 | **Gold v2 (active)** | Apache Parquet (Snappy) | `gold/jobs/v2/` (three physical tables + manifest) | Provides a normalized star-schema analytical model with bridge tables. All datasets are partitioned by `snapshot_date=YYYY-MM-DD`. Writes are idempotent and include `_SUCCESS` verification and an ETL manifest. |
-| **Gold v1 (legacy)** | Apache Parquet (Snappy) | `gold/jobs/fact_job_snapshots/snapshot_date=YYYY-MM-DD/` | Contains the flat fact dataset from the initial implementation. Retained for archival purposes and to maintain continuity for the Power BI v1 report. |
+| **Gold v1 (legacy)** | Apache Parquet (Snappy) | `gold/jobs/fact_job_snapshots/snapshot_date=YYYY-MM-DD/` | Contains the flat fact dataset from the initial implementation. Retained as an archive and rollback/reference layer; it is not the source of the current Power BI dashboards. |
 
 ### Gold v2 Layer Structure (`gold/jobs/v2/`)
 
@@ -227,7 +227,7 @@ Database, view, and data-quality validation definitions are stored in the `sql/`
    - **`dbo.vw_job_locations_v2`:** Maps the `gold/jobs/v2/bridge_job_locations/snapshot_date=*/*.parquet` locations table.
    - **`dbo.vw_gold_v2_commits`:** Maps the `gold/jobs/v2/_manifest/snapshot_date=*/*.parquet` ETL manifests.
 3. **Legacy Gold v1 view (`sql/02_create_view_job_snapshots.sql`):**
-   - **`dbo.vw_job_snapshots`:** Maps `gold/jobs/fact_job_snapshots/snapshot_date=YYYY-MM-DD/` and serves the Power BI v1 report.
+   - **`dbo.vw_job_snapshots`:** Maps `gold/jobs/fact_job_snapshots/snapshot_date=*/*.parquet` for archival, rollback, and legacy validation purposes. The current Power BI model does not use this view.
 
 > [!IMPORTANT]
 > **SQL completeness verification:**
@@ -281,15 +281,15 @@ The `src/upload_to_adls.py` script performs a safe upload:
 
 All snapshots above successfully passed duplicate checks, array-cardinality preservation tests, and `job_snapshot_key` relational-integrity verification.
 
-### Power BI Report Previews
+### Current Power BI Dashboards
 
-The screenshots below present proposed report views. The Power BI migration to the Gold v2 model remains a planned phase and is not presented as complete.
+The screenshots below show the current **Market Overview** and **Career Explorer** dashboards. The checked-in PBIP/TMDL semantic model imports the active Gold v2 Synapse SQL views.
 
-![Power BI Market Overview report preview](readme%20pic/Power_bi_1.png)
+![Power BI Market Overview dashboard](readme%20pic/Power_bi_1.png)
 
 *Market Overview — hiring activity, in-demand skills, remote opportunities, and market movement.*
 
-![Power BI Career Explorer report preview](readme%20pic/Power_bi_2.png)
+![Power BI Career Explorer dashboard](readme%20pic/Power_bi_2.png)
 
 *Career Explorer — role filters, required skills, salary benchmarks, locations, and matching job offers.*
 
@@ -311,13 +311,13 @@ The screenshots below present proposed report views. The Power BI migration to t
 - [x] Safe retention of **Gold v1** as legacy, including the `dbo.vw_job_snapshots` view and `nb_silver_to_gold_jobs` notebook.
 - [x] Synapse Serverless SQL views for Gold v2 (`dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, `dbo.vw_job_locations_v2`, `dbo.vw_gold_v2_commits`).
 - [x] Read permissions for the `powerbi-reader` analytical account.
+- [x] Power BI migration to Gold v2:
+  - PBIP/TMDL semantic model importing the three active Gold v2 business views,
+  - Relationships between facts, skills, and locations based on `job_snapshot_key`,
+  - **Market Overview** and **Career Explorer** dashboard pages.
 
 ### Planned for Future Phases
 
-- [ ] **Power BI migration to Gold v2:**
-  - Build a Power BI Desktop star schema based on the new v2 views,
-  - Deliver advanced analysis of technical and soft-skill matrices correlated with salary ranges,
-  - Add multidimensional analysis of location and work flexibility (Remote vs Hybrid).
 - [ ] Implement automated Azure Monitor / Logic Apps alerting rules for ADF pipeline failures.
 - [ ] Introduce a recurring historical-data retention policy for the Bronze container (ADLS Lifecycle Management).
 
@@ -380,8 +380,8 @@ Architektura opiera się na separacji warstw składowania, przetwarzania rozpros
           │
           ▼ Warstwa Prezentacji Analitycznej
 [ Power BI ]
-          ├── Raport Power BI v1 (aktywny na widoku legacy dbo.vw_job_snapshots)
-          └── Raport Power BI v2 (faza przyszła — migracja do modelu gwiazdy Gold v2)
+          ├── Dashboard Market Overview (Gold v2)
+          └── Dashboard Career Explorer (Gold v2)
 ```
 
 ### Komponenty systemu:
@@ -397,7 +397,7 @@ Architektura opiera się na separacji warstw składowania, przetwarzania rozpros
 - **Warstwa analityczna:** Synapse Serverless SQL Pool (baza `job_market`):
   - Aktywne widoki Gold v2: `dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, `dbo.vw_job_locations_v2`, `dbo.vw_gold_v2_commits`,
   - Widok legacy: `dbo.vw_job_snapshots` (Gold v1).
-- **Raportowanie i BI:** Istniejący raport Power BI v1 bazujący na Gold v1; migracja raportu do modelu gwiazdy opartego na Gold v2 zaplanowana jest jako przyszły etap.
+- **Raportowanie i BI:** Aktualny projekt Power BI (`.pbip` z modelem semantycznym TMDL) importuje `dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2` oraz `dbo.vw_job_locations_v2`. Aktywne strony dashboardu to **Market Overview** i **Career Explorer**.
 
 ---
 
@@ -408,7 +408,7 @@ Architektura opiera się na separacji warstw składowania, przetwarzania rozpros
 | **Bronze** | Surowy JSON + `manifest.json` | `bronze/source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=<timestamp_utc>/` | Zapis 1:1 odpowiedzi źródłowych API w podziale na strony. Każda próba otrzymuje unikalny znacznik czasu `run_id`, eliminując ryzyko nadpisania danych historycznych. Status `completed` nadawany jest wyłącznie po pełnej weryfikacji kompletu stron i unikalności ofert. |
 | **Silver** | Apache Parquet (Snappy) | `silver/jobs/source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=<run_id>/` | Typowanie, deduplikacja ogłoszeń w obrębie danego snapshotu, normalizacja widełek wynagrodzeń (rozbicie na `salary_from`, `salary_to`, `currency`), spłaszczenie tablic technologii oraz flagi jakości danych. Pomyślny zapis wieńczy znacznik `_SUCCESS`. |
 | **Gold v2 (aktywna)** | Apache Parquet (Snappy) | `gold/jobs/v2/` (trzy tabele fizyczne + manifest) | Znormalizowany model analityczny w architekturze gwiazdy z tabelami pomostowymi. Wszystkie zbiory partycjonowane są według `snapshot_date=YYYY-MM-DD`. Idempotentny zapis z weryfikacją `_SUCCESS` i manifestem ETL. |
-| **Gold v1 (legacy)** | Apache Parquet (Snappy) | `gold/jobs/fact_job_snapshots/snapshot_date=YYYY-MM-DD/` | Płaski zbiór faktów z pierwszej wersji wdrożenia. Zachowany w celach archiwalnych oraz dla ciągłości działania raportu Power BI v1. |
+| **Gold v1 (legacy)** | Apache Parquet (Snappy) | `gold/jobs/fact_job_snapshots/snapshot_date=YYYY-MM-DD/` | Płaski zbiór faktów z pierwszej wersji wdrożenia. Zachowany jako archiwum oraz warstwa rollback/referencyjna; nie zasila aktualnych dashboardów Power BI. |
 
 ### Struktura warstwy Gold v2 (`gold/jobs/v2/`):
 Wszystkie zbiory są partycjonowane według `snapshot_date=YYYY-MM-DD`:
@@ -531,7 +531,7 @@ Skrypty definicji bazy danych, widoków i walidacji jakości znajdują się w ka
    - **`dbo.vw_job_locations_v2`:** Mapuje tabelę lokalizacji `gold/jobs/v2/bridge_job_locations/snapshot_date=*/*.parquet`.
    - **`dbo.vw_gold_v2_commits`:** Mapuje manifesty ETL `gold/jobs/v2/_manifest/snapshot_date=*/*.parquet`.
 3. **Widok legacy Gold v1 (`sql/02_create_view_job_snapshots.sql`):**
-   - **`dbo.vw_job_snapshots`:** Mapuje `gold/jobs/fact_job_snapshots/snapshot_date=*/*.parquet` i zasila raport Power BI v1.
+   - **`dbo.vw_job_snapshots`:** Mapuje `gold/jobs/fact_job_snapshots/snapshot_date=*/*.parquet` na potrzeby archiwalne, rollbacku i walidacji legacy. Aktualny model Power BI nie korzysta z tego widoku.
 
 > [!IMPORTANT]
 > **Mechanizm weryfikacji kompletności w SQL:**
@@ -579,15 +579,15 @@ Skrypt `src/upload_to_adls.py` realizuje bezpieczny upload:
 
 Wszystkie powyższe snapshoty pomyślnie przeszły testy braku duplikatów, zachowania kardynalności tablic oraz weryfikację spójności relacyjnej klucza `job_snapshot_key`.
 
-### Power BI Report Previews
+### Aktualne dashboardy Power BI
 
-Poniższe zrzuty prezentują projektowane widoki raportowe. Migracja Power BI do modelu Gold v2 pozostaje planowanym etapem i nie jest przedstawiana jako ukończona.
+Poniższe zrzuty przedstawiają aktualne dashboardy **Market Overview** i **Career Explorer**. Wersjonowany w repozytorium model semantyczny PBIP/TMDL importuje aktywne widoki Synapse SQL warstwy Gold v2.
 
-![Power BI Market Overview report preview](readme%20pic/Power_bi_1.png)
+![Power BI Market Overview dashboard](readme%20pic/Power_bi_1.png)
 
 *Market Overview — hiring activity, in-demand skills, remote opportunities, and market movement.*
 
-![Power BI Career Explorer report preview](readme%20pic/Power_bi_2.png)
+![Power BI Career Explorer dashboard](readme%20pic/Power_bi_2.png)
 
 *Career Explorer — role filters, required skills, salary benchmarks, locations, and matching job offers.*
 
@@ -608,11 +608,11 @@ Poniższe zrzuty prezentują projektowane widoki raportowe. Migracja Power BI do
 - [x] Bezpieczne zachowanie warstwy **Gold v1** jako legacy (w tym widoku `dbo.vw_job_snapshots` i notatnika `nb_silver_to_gold_jobs`).
 - [x] Widoki Synapse Serverless SQL dla Gold v2 (`dbo.vw_job_snapshots_v2`, `dbo.vw_job_skills_v2`, `dbo.vw_job_locations_v2`, `dbo.vw_gold_v2_commits`).
 - [x] Uprawnienia odczytu dla konta analitycznego `powerbi-reader`.
+- [x] Migracja Power BI do Gold v2:
+  - Model semantyczny PBIP/TMDL importujący trzy aktywne widoki biznesowe Gold v2,
+  - Relacje między faktami, umiejętnościami i lokalizacjami oparte na `job_snapshot_key`,
+  - Strony dashboardu **Market Overview** i **Career Explorer**.
 
 ### Planowane w kolejnych etapach:
-- [ ] **Migracja Power BI do Gold v2:**
-  - Budowa modelu gwiazdy w Power BI Desktop opartego o nowe widoki v2,
-  - Zaawansowane analizy macierzy umiejętności twardych i miękkich skorelowane z widełkami płacowymi,
-  - Analiza wielowymiarowa lokalizacji i elastyczności pracy (Remote vs Hybrid).
 - [ ] Wdrożenie reguł automatycznych alertów w Azure Monitor / Logic Apps dla niepowodzeń pipeline'u ADF.
 - [ ] Cykliczna polityka retencji danych historycznych w kontenerze Bronze (ADLS Lifecycle Management).
