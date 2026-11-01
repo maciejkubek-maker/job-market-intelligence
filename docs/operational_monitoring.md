@@ -21,7 +21,7 @@ Metoda `create_run` w Azure Data Factory SDK działa w trybie **asynchronicznym 
 
 GitHub Actions interpretuje to jako natychmiastowy sukces kroku i oznacza cały workflow zielonym znacznikiem (SUCCESS).
 
-Rzeczywiste przetwarzanie w ADF składa się z dwóch zadań Synapse Spark (`nb_bronze_to_silver_jobs` oraz `nb_silver_to_gold_jobs`), które wymagają alokacji węzłów w puli `sparkjobmarket` i trwają od kilku do kilkunastu minut. Jeżeli na tym etapie wystąpi:
+Rzeczywiste przetwarzanie w ADF składa się z dwóch zadań Synapse Spark (`nb_bronze_to_silver_jobs` oraz aktywnego `nb_silver_to_gold_v2_jobs`), które wymagają alokacji węzłów w puli `sparkjobmarket` i trwają od kilku do kilkunastu minut. Jeżeli na tym etapie wystąpi:
 - brak zasobów lub błąd alokacji klastra Spark,
 - nieobsługiwany błąd w kodzie PySpark (np. naruszenie typów, błąd deserializacji JSON),
 - błąd uprawnień do kontenerów `silver` lub `gold` w ADLS Gen2,

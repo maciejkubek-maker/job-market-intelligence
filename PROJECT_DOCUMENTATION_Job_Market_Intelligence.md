@@ -1,5 +1,8 @@
 # Polish Job Market Intelligence — Azure ETL & Power BI
 
+> [!WARNING]
+> **Historyczny plan początkowy (2026-10-26).** Dokument zachowuje pierwotne założenia projektu i nie jest aktualną specyfikacją architektury. Zawiera zastąpione propozycje, takie jak Azure SQL Database, oraz decyzje, które były wówczas otwarte. Wdrożone rozwiązanie korzysta z Azure Synapse Serverless SQL, aktywnego modelu analitycznego Gold v2 i dashboardów Power BI opartych na widokach Gold v2. Aktualny stan opisują [README.md](README.md) i [docs/architecture.md](docs/architecture.md).
+
 **Dokumentacja techniczna v1.0**  
 **Data:** 2026-10-26  
 **Status:** projektowanie / weryfikacja źródeł danych  
