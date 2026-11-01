@@ -13,6 +13,10 @@ Projekt implementuje architekturę **Medallion Lakehouse** w chmurze **Microsoft
 
 ## 1. Zrealizowana Architektura Rozwiązania (Azure Lakehouse)
 
+![Job Market Intelligence data flow architecture](readme%20pic/schema.png)
+
+*Project architecture — automated data flow from SOLID.Jobs API to Azure Lakehouse, Synapse SQL, and Power BI.*
+
 Architektura opiera się na separacji warstw składowania, przetwarzania rozproszonego oraz prezentacji analitycznej:
 
 ```
@@ -250,6 +254,18 @@ Skrypt `src/upload_to_adls.py` realizuje bezpieczny upload:
 | **2026-10-29** | 1 537 | 10 152 | 1 537 | Zgodny (OK) |
 
 Wszystkie powyższe snapshoty pomyślnie przeszły testy braku duplikatów, zachowania kardynalności tablic oraz weryfikację spójności relacyjnej klucza `job_snapshot_key`.
+
+### Power BI Report Previews
+
+Poniższe zrzuty prezentują projektowane widoki raportowe. Migracja Power BI do modelu Gold v2 pozostaje planowanym etapem i nie jest przedstawiana jako ukończona.
+
+![Power BI Market Overview report preview](readme%20pic/Power_bi_1.png)
+
+*Market Overview — hiring activity, in-demand skills, remote opportunities, and market movement.*
+
+![Power BI Career Explorer report preview](readme%20pic/Power_bi_2.png)
+
+*Career Explorer — role filters, required skills, salary benchmarks, locations, and matching job offers.*
 
 ---
 
