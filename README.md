@@ -11,7 +11,7 @@
 
 A comprehensive Data Engineering project that delivers a fully automated, idempotent ETL/ELT pipeline for monitoring the Polish job market in data and automation roles (**Data Analyst**, **BI Analyst**, **Data Engineer**, **Process Automation**).
 
-The project implements a **Medallion Lakehouse** architecture on **Microsoft Azure** (Bronze, Silver, Gold v2), passwordless orchestration with **GitHub Actions OIDC** and **Azure Data Factory**, distributed processing in **Azure Synapse Spark**, and an analytical serving layer in **Azure Synapse Serverless SQL**.
+The project implements a **Medallion Lakehouse** architecture on **Microsoft Azure** (Bronze, Silver, Gold v2), daily scheduling through **Azure Logic Apps**, passwordless GitHub Actions authentication to Azure via **OIDC**, and data orchestration with **Azure Data Factory**, distributed processing in **Azure Synapse Spark**, and an analytical serving layer in **Azure Synapse Serverless SQL**.
 
 ---
 
@@ -24,11 +24,13 @@ The project implements a **Medallion Lakehouse** architecture on **Microsoft Azu
 The architecture separates storage, distributed processing, and analytical presentation layers:
 
 ```
-[ SOLID.Jobs Public API ]
-          │  HTTP GET (pagination, schema validation, error handling)
+[ Azure Logic App: logic-job-market-daily-trigger ]
+          │  Daily 06:00 (W. Europe Standard Time); dispatch before 2026-11-07
+          ├──► [ Azure Key Vault: github-actions-token ] (Managed Identity)
+          │  GitHub API: workflow_dispatch (ref: main)
           ▼
-[ GitHub Actions Runner ]  ──(OIDC — passwordless and secretless)──► [ Azure Entra ID ]
-          │  Workflow: Job Market - Daily ETL (Azure) [cron: 40 4 * * * UTC]
+[ GitHub Actions Runner ]  ──(OIDC to Azure)──► [ Azure Entra ID ]
+          │  Python: HTTP GET from SOLID.Jobs API (pagination, validation, error handling)
           ▼  Write raw JSON pages + manifest.json
 [ ADLS Gen2: Bronze ] (source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=.../)
           │
@@ -68,8 +70,9 @@ The architecture separates storage, distributed processing, and analytical prese
 
 - **Data source:** Public [SOLID.Jobs](https://solid.jobs/api-ofert-pracy) API for IT job postings in Poland.
 - **Extraction and validation:** Python 3.11 (`src/extract_solidjobs.py`), managed with `uv`.
-- **Daily orchestration:** GitHub Actions (`.github/workflows/daily_extract.yml`), workflow named `Job Market - Daily ETL (Azure)`, scheduled with `cron: "40 4 * * *"` in UTC (05:40 Polish time in winter and 06:40 in summer). GitHub Actions cron syntax does not provide a `timezone` field.
-- **Authentication:** Short-lived OpenID Connect (OIDC) tokens with no static secrets or passwords.
+- **Daily scheduling:** Azure Logic App (`logic-job-market-daily-trigger`) runs daily at 06:00 in `W. Europe Standard Time`. Its current date condition allows GitHub dispatch only before 2026-11-07 (through November 6, inclusive).
+- **GitHub workflow:** `Job Market - Daily ETL (Azure)` (`.github/workflows/daily_extract.yml`) is started through GitHub API `workflow_dispatch` on `main`; no GitHub Actions cron is configured.
+- **Authentication:** Logic App retrieves its GitHub API token from Azure Key Vault with Managed Identity. GitHub Actions separately authenticates to Azure using short-lived OIDC credentials.
 - **Data storage:** Azure Data Lake Storage Gen2 (`stjobmarketdev01`) with three Medallion architecture containers (`bronze`, `silver`, `gold`).
 - **Cloud orchestration:** Azure Data Factory (`adf-job-market-dev`, pipeline `pl_job_market_daily_etl`), triggered asynchronously by the GitHub Actions runner.
 - **Distributed processing:** Azure Synapse Spark (`sparkjobmarket`):
@@ -153,7 +156,8 @@ If an error occurs (for example, HTTP 500, a network timeout, missing pages, or 
 
 The project eliminates the need to store passwords, tokens, or static client secrets in the GitHub repository:
 
-- **Microsoft Entra ID workload identity federation:** GitHub Actions negotiates an OpenID Connect (OIDC) token with Azure.
+- **Logic App → GitHub:** `logic-job-market-daily-trigger` retrieves the GitHub API token (`github-actions-token`) from Azure Key Vault `kv-job-market-dev-01` using Managed Identity, then calls GitHub `workflow_dispatch`. The token is not stored in this repository.
+- **GitHub Actions → Azure:** GitHub Actions uses Microsoft Entra ID workload identity federation (OIDC), independently of the token used by Logic App to call the GitHub API.
 - **Principle of least privilege:**
   - The continuous integration workflow (`.github/workflows/ci.yml`) has only `contents: read` permission and no access to cloud resources or secrets.
   - The production workflow (`.github/workflows/daily_extract.yml`) has `id-token: write` permission strictly limited to the `main` branch.
@@ -236,6 +240,12 @@ Database, view, and data-quality validation definitions are stored in the `sql/`
 ---
 
 ## 7. Operational Monitoring and Verification Procedures (Troubleshooting)
+
+### Scheduler and GitHub dispatch
+
+- Check Azure Logic App `logic-job-market-daily-trigger` run history: `Condition` must evaluate to `true`. From 2026-11-07 it evaluates to `false` under the current configuration, and the GitHub call is skipped even if the Logic App run succeeds.
+- Check `Get_GitHub_Token` and the subsequent HTTP action. HTTP `204 No Content` means GitHub accepted the `workflow_dispatch` request, not that the GitHub workflow or downstream ETL completed.
+- Monitor each stage separately: **Logic App → GitHub Actions → Azure Data Factory → Synapse Spark**.
 
 ### Key Monitoring Principle: ADF Is Asynchronous
 
@@ -331,7 +341,7 @@ The screenshots below show the current **Market Overview** and **Career Explorer
 
 Kompleksowy projekt inżynierii danych realizujący w pełni zautomatyzowany, idempotentny proces ETL/ELT monitorujący polski rynek pracy w obszarze danych i automatyzacji (**Data Analyst**, **BI Analyst**, **Data Engineer**, **Process Automation**).
 
-Projekt implementuje architekturę **Medallion Lakehouse** w chmurze **Microsoft Azure** (Bronze, Silver, Gold v2), bezpieczną orkiestrację bez haseł przez **GitHub Actions OIDC** i **Azure Data Factory**, przetwarzanie rozproszone w **Azure Synapse Spark** oraz warstwę analityczną w **Azure Synapse Serverless SQL**.
+Projekt implementuje architekturę **Medallion Lakehouse** w chmurze **Microsoft Azure** (Bronze, Silver, Gold v2), dzienny harmonogram przez **Azure Logic Apps**, bezhasłowe uwierzytelnianie GitHub Actions do Azure przez **OIDC** oraz orkiestrację danych w **Azure Data Factory**, przetwarzanie rozproszone w **Azure Synapse Spark** oraz warstwę analityczną w **Azure Synapse Serverless SQL**.
 
 ---
 
@@ -344,11 +354,13 @@ Projekt implementuje architekturę **Medallion Lakehouse** w chmurze **Microsoft
 Architektura opiera się na separacji warstw składowania, przetwarzania rozproszonego oraz prezentacji analitycznej:
 
 ```
-[ SOLID.Jobs Public API ]
-          │  HTTP GET (paginacja, walidacja schematu, obsługa błędów)
+[ Azure Logic App: logic-job-market-daily-trigger ]
+          │  Codziennie 06:00 (W. Europe Standard Time); wywołania przed 2026-11-07
+          ├──► [ Azure Key Vault: github-actions-token ] (Managed Identity)
+          │  GitHub API: workflow_dispatch (ref: main)
           ▼
-[ GitHub Actions Runner ]  ──(OIDC - bez haseł i sekretów)──► [ Azure Entra ID ]
-          │  Workflow: Job Market - Daily ETL (Azure) [cron: 40 4 * * * UTC]
+[ GitHub Actions Runner ]  ──(OIDC do Azure)──► [ Azure Entra ID ]
+          │  Python: HTTP GET z SOLID.Jobs API (paginacja, walidacja, obsługa błędów)
           ▼  Zapis surowych stron JSON + manifest.json
 [ ADLS Gen2: Bronze ] (source=solidjobs/snapshot_date=YYYY-MM-DD/run_id=.../)
           │
@@ -387,8 +399,9 @@ Architektura opiera się na separacji warstw składowania, przetwarzania rozpros
 ### Komponenty systemu:
 - **Źródło danych:** Publiczne API [SOLID.Jobs](https://solid.jobs/api-ofert-pracy) dla ofert IT w Polsce.
 - **Ekstrakcja i walidacja:** Python 3.11 (`src/extract_solidjobs.py`), zarządzany przez narzędzie `uv`.
-- **Orkiestracja dzienna:** GitHub Actions (`.github/workflows/daily_extract.yml`), workflow o nazwie `Job Market - Daily ETL (Azure)` z harmonogramem `cron: "40 4 * * *"` w UTC (co odpowiada 05:40 czasu polskiego zimą i 06:40 latem). W składni cron GitHub Actions nie występuje pole `timezone`.
-- **Uwierzytelnianie:** Krótkoterminowe tokeny OpenID Connect (OIDC) bez statycznych sekretów i haseł.
+- **Harmonogram dzienny:** Azure Logic App (`logic-job-market-daily-trigger`) uruchamia się codziennie o 06:00 w strefie `W. Europe Standard Time`. Obecny warunek daty dopuszcza wywołania GitHub tylko przed 07.11.2026 (do 6 listopada włącznie).
+- **Workflow GitHub:** `Job Market - Daily ETL (Azure)` (`.github/workflows/daily_extract.yml`) jest uruchamiany przez GitHub API `workflow_dispatch` na gałęzi `main`; w GitHub Actions nie ustawiono własnego harmonogramu cron.
+- **Uwierzytelnianie:** Logic App pobiera token GitHub API z Azure Key Vault przez Managed Identity. GitHub Actions osobno uwierzytelnia się do Azure przy użyciu krótkoterminowych poświadczeń OIDC.
 - **Składowanie danych:** Azure Data Lake Storage Gen2 (`stjobmarketdev01`) z trzema kontenerami architektury Medallion (`bronze`, `silver`, `gold`).
 - **Orkiestracja chmurowa:** Azure Data Factory (`adf-job-market-dev`, pipeline `pl_job_market_daily_etl`) wyzwalany asynchronicznie przez runnera GitHub Actions.
 - **Przetwarzanie rozproszone:** Azure Synapse Spark (`sparkjobmarket`):
@@ -466,7 +479,8 @@ W przypadku błędu (np. HTTP 500, timeout sieci, brakujące strony lub duplikat
 ## 4. Bezpieczeństwo i Architektura Bezhasłowa (OIDC)
 
 W projekcie wyeliminowano konieczność przechowywania haseł, tokenów czy statycznych kluczy Client Secrets w repozytorium GitHub:
-- **Federacja tożsamości Microsoft Entra ID:** GitHub Actions negocjuje z Azure token OpenID Connect (OIDC).
+- **Logic App → GitHub:** `logic-job-market-daily-trigger` pobiera token GitHub API (`github-actions-token`) z Azure Key Vault `kv-job-market-dev-01` przez Managed Identity, a następnie wywołuje `workflow_dispatch`. Token nie jest przechowywany w repozytorium.
+- **GitHub Actions → Azure:** GitHub Actions korzysta z federacji tożsamości Microsoft Entra ID (OIDC), niezależnie od tokenu, którym Logic App wywołuje GitHub API.
 - **Zasada najmniejszych uprawnień (Least Privilege):**
   - Workflow ciągłej integracji (`.github/workflows/ci.yml`) posiada wyłącznie uprawnienie `contents: read` i nie ma dostępu do chmury ani sekretów.
   - Workflow produkcyjny (`.github/workflows/daily_extract.yml`) posiada uprawnienie `id-token: write` ściśle zawężone do gałęzi `main`.
@@ -540,6 +554,12 @@ Skrypty definicji bazy danych, widoków i walidacji jakości znajdują się w ka
 ---
 
 ## 7. Monitoring Operacyjny i Procedury Weryfikacji (Troubleshooting)
+
+### Harmonogram i wywołanie GitHub
+
+- W historii uruchomień Azure Logic App `logic-job-market-daily-trigger` sprawdź, czy `Condition` ma wynik `true`. Od 07.11.2026 w bieżącej konfiguracji warunek będzie `false`, a wywołanie GitHub zostanie pominięte, nawet jeśli Logic App zakończy się sukcesem.
+- Sprawdź `Get_GitHub_Token` oraz następną akcję HTTP. Status `204 No Content` oznacza, że GitHub przyjął żądanie `workflow_dispatch`, a nie że zakończył się workflow lub cały ETL.
+- Monitoruj etapy osobno: **Logic App → GitHub Actions → Azure Data Factory → Synapse Spark**.
 
 ### Kluczowa zasada monitoringu: Asynchroniczność ADF
 W procesie dziennym wywołanie ADF w skrypcie `src/trigger_adf.py` odbywa się metodą `create_run` w trybie asynchronicznym (fire-and-forget). Zwraca ona identyfikator `run_id` w momencie przyjęcia zlecenia przez ADF.
