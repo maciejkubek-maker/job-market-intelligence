@@ -17,17 +17,106 @@
           "projections": [
             {
               "field": {
-                "Column": {
+                "HierarchyLevel": {
                   "Expression": {
-                    "SourceRef": {
-                      "Entity": "vw_job_snapshots_v2"
+                    "Hierarchy": {
+                      "Expression": {
+                        "PropertyVariationSource": {
+                          "Expression": {
+                            "SourceRef": {
+                              "Entity": "vw_job_snapshots_v2"
+                            }
+                          },
+                          "Name": "Variation",
+                          "Property": "snapshot_date"
+                        }
+                      },
+                      "Hierarchy": "Date Hierarchy"
                     }
                   },
-                  "Property": "snapshot_date"
+                  "Level": "Year"
                 }
               },
-              "queryRef": "vw_job_snapshots_v2.snapshot_date",
-              "nativeQueryRef": "snapshot_date",
+              "queryRef": "vw_job_snapshots_v2.snapshot_date.Variation.Date Hierarchy.Year",
+              "nativeQueryRef": "snapshot_date Year",
+              "active": true
+            },
+            {
+              "field": {
+                "HierarchyLevel": {
+                  "Expression": {
+                    "Hierarchy": {
+                      "Expression": {
+                        "PropertyVariationSource": {
+                          "Expression": {
+                            "SourceRef": {
+                              "Entity": "vw_job_snapshots_v2"
+                            }
+                          },
+                          "Name": "Variation",
+                          "Property": "snapshot_date"
+                        }
+                      },
+                      "Hierarchy": "Date Hierarchy"
+                    }
+                  },
+                  "Level": "Quarter"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.snapshot_date.Variation.Date Hierarchy.Quarter",
+              "nativeQueryRef": "snapshot_date Quarter",
+              "active": true
+            },
+            {
+              "field": {
+                "HierarchyLevel": {
+                  "Expression": {
+                    "Hierarchy": {
+                      "Expression": {
+                        "PropertyVariationSource": {
+                          "Expression": {
+                            "SourceRef": {
+                              "Entity": "vw_job_snapshots_v2"
+                            }
+                          },
+                          "Name": "Variation",
+                          "Property": "snapshot_date"
+                        }
+                      },
+                      "Hierarchy": "Date Hierarchy"
+                    }
+                  },
+                  "Level": "Month"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.snapshot_date.Variation.Date Hierarchy.Month",
+              "nativeQueryRef": "snapshot_date Month",
+              "active": true
+            },
+            {
+              "field": {
+                "HierarchyLevel": {
+                  "Expression": {
+                    "Hierarchy": {
+                      "Expression": {
+                        "PropertyVariationSource": {
+                          "Expression": {
+                            "SourceRef": {
+                              "Entity": "vw_job_snapshots_v2"
+                            }
+                          },
+                          "Name": "Variation",
+                          "Property": "snapshot_date"
+                        }
+                      },
+                      "Hierarchy": "Date Hierarchy"
+                    }
+                  },
+                  "Level": "Day"
+                }
+              },
+              "queryRef": "vw_job_snapshots_v2.snapshot_date.Variation.Date Hierarchy.Day",
+              "nativeQueryRef": "snapshot_date Day",
               "active": true
             }
           ]

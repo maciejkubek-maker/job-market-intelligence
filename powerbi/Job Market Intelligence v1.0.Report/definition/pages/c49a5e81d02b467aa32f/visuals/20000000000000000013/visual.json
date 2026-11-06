@@ -152,6 +152,23 @@
             }
           ]
         }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "vw_job_snapshots_v2"
+                  }
+                },
+                "Property": "salary_to"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
       }
     },
     "visualContainerObjects": {
@@ -205,6 +222,7 @@
             "Property": "Is Latest Snapshot"
           }
         },
+        "type": "Advanced",
         "filter": {
           "Version": 2,
           "From": [
@@ -238,8 +256,7 @@
               }
             }
           ]
-        },
-        "type": "Advanced"
+        }
       }
     ]
   }
